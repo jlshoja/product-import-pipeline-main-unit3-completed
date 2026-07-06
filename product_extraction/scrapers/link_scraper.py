@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # ─── Shared Excel utilities (Unit 3) ───────────────────────────────
 from common.excel_utils import read_excel, write_dataframe
+from common.file_utils import safe_delete
 
 # ─────────────────────────────────────────────
 # Constants
@@ -126,8 +127,7 @@ def choose_run_mode() -> str:
             confirm = input("  ⚠ All previous data will be deleted. Are you sure? (y/n): ").strip().lower()
             if confirm == 'y':
                 for f in [PROGRESS_FILE, CHECKPOINT_FILE, ERROR_LOG_FILE]:
-                    if os.path.exists(f):
-                        os.remove(f)
+                    safe_delete(f)
                 print("  ✓ Previous files deleted.\n")
                 return MODE_FRESH
         elif choice == MODE_RESUME:
