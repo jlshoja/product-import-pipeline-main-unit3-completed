@@ -13,7 +13,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 import time
-import json
 import os
 from pathlib import Path
 from datetime import datetime
@@ -24,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # ─── Shared Excel utilities (Unit 3) ───────────────────────────────
 from common.excel_utils import read_excel, write_dataframe
 from common.file_utils import safe_delete
+from common.progress_utils import load_json_state, save_json_state
 
 # ─────────────────────────────────────────────
 # Constants
@@ -41,6 +41,13 @@ MODE_RETRY_FAILED = '3'  # only failed URLs
 
 # in-memory errors for final summary
 _error_records: list = []
+
+DEFAULT_PROGRESS_STATE = {
+    'completed_urls': [],
+    'failed_urls': [],
+    'failed_products': [],
+    'all_products': [],
+}
 
 
 # ─────────────────────────────────────────────
@@ -60,19 +67,11 @@ def load_progress() -> dict:
       "all_products": [...]       # all successfully extracted products so far
     }
     """
-    if os.path.exists(PROGRESS_FILE):
-        with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        # backward compatibility with older progress files
-        data.setdefault('failed_urls', [])
-        data.setdefault('failed_products', [])
-        return data
-    return {'completed_urls': [], 'failed_urls': [], 'failed_products': [], 'all_products': []}
+    return load_json_state(PROGRESS_FILE, DEFAULT_PROGRESS_STATE)
 
 
 def save_progress(state: dict):
-    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
+    save_json_state(PROGRESS_FILE, state)
     if state['all_products']:
         df = pd.DataFrame(state['all_products']).drop_duplicates(subset=['Product URL'], keep='first')
         df.insert(0, 'No', range(1, len(df) + 1))
