@@ -22,8 +22,6 @@ if sys.platform == 'win32':
         pass
 
 import pandas as pd
-import re
-from datetime import datetime
 from pathlib import Path
 import openpyxl
 from openpyxl.styles import Font, PatternFill
@@ -41,7 +39,13 @@ from common.excel_utils import (
     CENTER_CENTER,
     excel_writer,
 )
+from common.date_utils import get_persian_date as _get_persian_date
+from common.date_utils import gregorian_to_jalali as _gregorian_to_jalali
 from common.file_utils import ensure_directory
+from common.price_utils import extract_price_from_text as _extract_price_from_text
+from common.price_utils import format_number as _format_number
+from common.text_utils import extract_product_code as _extract_product_code
+from common.text_utils import extract_product_name as _extract_product_name
 
 # Import Price History Manager
 try:
@@ -52,148 +56,6 @@ except:
     HAS_HISTORY = False
     print("[WARNING] Price History Manager not available")
     sys.stdout.flush()
-
-
-def gregorian_to_jalali(g_y, g_m, g_d):
-    """تبدیل تاریخ میلادی به شمسی"""
-    g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    j_days_in_month = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]
-    
-    gy = g_y - 1600
-    gm = g_m - 1
-    gd = g_d - 1
-    
-    g_day_no = 365 * gy + ((gy + 3) // 4) - ((gy + 99) // 100) + ((gy + 399) // 400)
-    
-    for i in range(gm):
-        g_day_no += g_days_in_month[i]
-    
-    if gm > 1 and ((gy % 4 == 0 and gy % 100 != 0) or (gy % 400 == 0)):
-        g_day_no += 1
-    
-    g_day_no += gd
-    
-    j_day_no = g_day_no - 79
-    
-    j_np = j_day_no // 12053
-    j_day_no %= 12053
-    
-    jy = 979 + 33 * j_np + 4 * (j_day_no // 1461)
-    j_day_no %= 1461
-    
-    if j_day_no >= 366:
-        jy += (j_day_no - 1) // 365
-        j_day_no = (j_day_no - 1) % 365
-    
-    j_month = 0
-    for i in range(12):
-        v = j_days_in_month[i]
-        if i == 11 and j_day_no >= 365:
-            v = 30
-        if j_day_no < v:
-            break
-        j_day_no -= v
-        j_month += 1
-    
-    jm = j_month + 1
-    jd = j_day_no + 1
-    
-    return jy, jm, jd
-
-
-def get_persian_date():
-    """دریافت تاریخ شمسی به فرمت 1403/10/08"""
-    today = datetime.now()
-    j_y, j_m, j_d = gregorian_to_jalali(today.year, today.month, today.day)
-    return f"{j_y:04d}/{j_m:02d}/{j_d:02d}"
-
-
-def extract_price_from_text(text):
-    """
-    استخراج قیمت از متن
-    مثال: "چمدان کد 8009 ۲٬۵۴۰٬۰۰۰" -> 2540000
-    """
-    if pd.isna(text):
-        return None
-    
-    text = str(text)
-    
-    # تبدیل اعداد فارسی به انگلیسی
-    persian_to_english = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
-    text = text.translate(persian_to_english)
-    
-    # حذف کاما و جداکننده‌های هزارگان
-    text = text.replace('٬', '').replace(',', '')
-    
-    # پیدا کردن تمام اعداد
-    numbers = re.findall(r'\d+', text)
-    
-    # اعداد بزرگتر از 10000 احتمالاً قیمت هستند
-    prices = [int(num) for num in numbers if len(num) >= 5]
-    
-    if prices:
-        # بزرگترین عدد احتمالاً قیمت است
-        return max(prices)
-    
-    return None
-
-
-def extract_product_name(text):
-    """
-    استخراج نام محصول بدون قیمت
-    """
-    if pd.isna(text):
-        return ""
-    
-    text = str(text).strip()
-    
-    # تبدیل اعداد فارسی به انگلیسی
-    persian_to_english = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
-    text_eng = text.translate(persian_to_english)
-    
-    # پیدا کردن موقعیت کد محصول
-    code_match = re.search(r'کد\s*\d+', text_eng)
-    
-    if code_match:
-        # نام محصول تا انتهای کد است
-        name_end = code_match.end()
-        product_name = text_eng[:name_end].strip()
-    else:
-        # اگر کد نداشت، همه متن تا اولین عدد بزرگ
-        product_name = text_eng
-    
-    # حذف قیمت‌ها (اعداد بزرگ)
-    product_name = re.sub(r'\s+\d{5,}.*$', '', product_name)
-    
-    # حذف جداکننده‌های هزارگان باقیمانده
-    product_name = re.sub(r'[،٬,]+', '', product_name)
-    
-    # حذف فضاهای اضافی
-    product_name = ' '.join(product_name.split())
-    
-    return product_name.strip()
-
-
-def extract_product_code(text):
-    """
-    استخراج کد محصول از نام
-    مثال: "چمدان کد 8009" -> "8009"
-    """
-    if pd.isna(text):
-        return ""
-    
-    text = str(text)
-    
-    # تبدیل اعداد فارسی به انگلیسی
-    persian_to_english = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
-    text = text.translate(persian_to_english)
-    
-    # پیدا کردن کد بعد از کلمه "کد"
-    match = re.search(r'کد\s*(\d+)', text)
-    if match:
-        return match.group(1)
-    
-    return ""
 
 
 def create_reports_folder():
@@ -386,21 +248,38 @@ def compare_data(current_df, previous_df):
     return current_df, new_products, price_changes, removed_products
 
 
-def format_number(num):
-    """فرمت اعداد با جداکننده هزارگان"""
-    if pd.isna(num) or num is None or num == "":
+def gregorian_to_jalali(g_y, g_m, g_d):
+    """Compatibility wrapper for shared Jalali conversion."""
+    return _gregorian_to_jalali(g_y, g_m, g_d)
+
+
+def get_persian_date():
+    """Compatibility wrapper for shared Persian date formatting."""
+    return _get_persian_date()
+
+
+def extract_price_from_text(text):
+    """Compatibility wrapper for shared price extraction."""
+    return _extract_price_from_text(text, min_digits=5)
+
+
+def extract_product_name(text):
+    """Compatibility wrapper for shared product name extraction."""
+    if pd.isna(text):
         return ""
-    
-    if isinstance(num, str):
-        num = num.replace(',', '').replace('٬', '').strip()
-        if not num:
-            return ""
-        try:
-            num = float(num)
-        except:
-            return num
-    
-    return f"{int(num):,}"
+    return _extract_product_name(text)
+
+
+def extract_product_code(text):
+    """Compatibility wrapper for shared product code extraction."""
+    if pd.isna(text):
+        return ""
+    return _extract_product_code(text)
+
+
+def format_number(num):
+    """Compatibility wrapper for shared number formatting."""
+    return _format_number(num)
 
 
 def style_excel_sheet(ws, sheet_type='main'):

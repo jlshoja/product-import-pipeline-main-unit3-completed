@@ -2,15 +2,15 @@
 
 ## Session Status
 
-Unit 6 - Color Management Consolidation completed.
+Unit 7 - Shared Utility Consolidation Phase 3 completed.
 
-Project is ready to begin Unit 7 Discovery.
+Project is ready to begin Unit 7 Phase 4 after approval.
 
 ---
 
 ## Current Branch
 
-migration-unit-6-color-management-consolidation
+migration-unit-7-shared-utility-consolidation
 
 ---
 
@@ -22,7 +22,7 @@ Pending
 
 ## Repository State
 
-Working Tree: Unit 6 changes pending commit
+Working Tree: Unit 7 Phase 3 code and documentation changes pending commit
 
 Validation Status: Passed
 
@@ -107,11 +107,41 @@ The following directories remain outside current migration scope and must not be
 
 ---
 
+## Unit 7 Phase 3 Work Completed
+
+Summary:
+
+* Added shared date, price, and text helper modules under `product_extraction/common/`.
+* Converted `product_extraction/trackers/helpers.py` into compatibility wrappers over the shared helpers.
+* Removed duplicate legacy helper bodies from `product_extraction/trackers/price_tracker.py`.
+* Preserved public helper names and behavior.
+* No changes were made to documentation until this requested phase boundary update.
+
+Files modified:
+
+* `product_extraction/common/date_utils.py`
+* `product_extraction/common/price_utils.py`
+* `product_extraction/common/text_utils.py`
+* `product_extraction/trackers/helpers.py`
+* `product_extraction/trackers/price_tracker.py`
+* `docs/MIGRATION_STATUS.md`
+* `docs/SESSION_HANDOFF.md`
+* `docs/SHARED_UTILITY_INVENTORY.md`
+
+Validation completed:
+
+* Compile validation
+* Shared helper regression checks
+* Import validation for affected tracker and dashboard modules
+* `git diff --check`
+
+---
+
 ## Next Recommended Action
 
-Start Unit 7 Discovery.
+Start Unit 7 Phase 4 after approval.
 
-Discovery must be completed before any implementation work.
+Phase 4 should stay narrow and only evaluate remaining safe helper consolidation in `product_extraction/reports/dashboard_generator.py`.
 
 ---
 
@@ -131,6 +161,49 @@ Discovery Tasks:
 
 ---
 
+## Unit 7 Phase 4 Startup Prompt
+
+Start Unit 7 - Shared Utility Consolidation, Phase 4 only.
+
+Work on branch `migration-unit-7-shared-utility-consolidation`. Do not work on `master` or any Unit 6 branch.
+
+Before changing code, read:
+
+* `docs/MIGRATION_OPERATIONAL_GUIDE.md`
+* `docs/MIGRATION_EXECUTION_ROADMAP.md`
+* `docs/MIGRATION_STATUS.md`
+* `docs/SESSION_HANDOFF.md`
+* `docs/SHARED_UTILITY_INVENTORY.md`
+
+Phase 4 objective:
+
+Review `product_extraction/reports/dashboard_generator.py` for any remaining safe helper consolidation and apply only the smallest behavior-preserving change set if a clear win exists.
+
+Allowed scope:
+
+* `product_extraction/reports/dashboard_generator.py`
+* existing shared helpers in `product_extraction/common/`
+
+Do not modify:
+
+* `import_builder/`
+* `image_processing/`
+* `product_extraction/scrapers/Old/`
+* `product_extraction/trackers/compare_scans.py`
+* `product_extraction/utils/logger.py`
+* unrelated files
+
+Validation required:
+
+* `python -m py_compile` for changed Python files
+* Targeted helper behavior checks
+* Import checks for affected modules
+* `git diff --check`
+
+Stop after Phase 4 and wait for approval before moving on.
+
+---
+
 ## Files Required For Unit 7 Discovery
 
 * `docs/MIGRATION_OPERATIONAL_GUIDE.md`
@@ -146,6 +219,4 @@ Discovery Tasks:
 
 ## Ready State
 
-Unit 7 Discovery Authorized: YES
-
-Unit 7 Implementation Authorized: NO
+Unit 7 Phase 4 Authorized: NO, waiting for approval
