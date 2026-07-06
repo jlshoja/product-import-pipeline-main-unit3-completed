@@ -852,3 +852,49 @@ Validation completed:
 * Import validation
 * Targeted report output checks
 * Diff whitespace validation
+
+---
+
+# Unit 8 Implementation Results
+
+Status: COMPLETE
+
+Implemented shared helpers:
+
+```text
+product_extraction/common/file_utils.py
+product_extraction/common/price_utils.py
+```
+
+Shared helper additions:
+
+```python
+find_first_glob_match()
+select_effective_price()
+parse_numeric_price()
+```
+
+Tracked consumer updates:
+
+```text
+product_extraction/trackers/compare_scans.py
+product_extraction/trackers/price_tracker.py
+```
+
+Behavior preserved:
+
+```python
+compare_scans.py helper compatibility wrappers
+price_tracker.py helper compatibility wrappers
+package imports
+direct imports
+direct-script execution
+```
+
+Validation completed:
+
+* Compile validation for changed Python modules
+* Package import validation
+* Direct import validation
+* Direct-script smoke validation for compare_scans and price_tracker
+* Diff whitespace validation

@@ -2,13 +2,13 @@
 
 ## Current Phase
 
-Migration Execution
+Migration Complete
 
 ---
 
 ## Current Branch
 
-migration-unit-7-shared-utility-consolidation
+migration-unit-8
 
 ---
 
@@ -22,199 +22,48 @@ migration-unit-7-shared-utility-consolidation
 | Unit 4 - File Operations Consolidation | COMPLETE |
 | Unit 5 - Progress Tracking Consolidation | COMPLETE |
 | Unit 6 - Color Management Consolidation | COMPLETE |
-| Unit 7 - Shared Utility Consolidation | IN PROGRESS |
-| Unit 8 - Core Processing Logic Migration | PENDING |
+| Unit 7 - Shared Utility Consolidation | COMPLETE |
+| Unit 8 - Core Processing Logic Migration | COMPLETE |
 
 ---
 
-## Unit 6 Completion Summary
+## Unit 8 Completion Summary
 
 Status: COMPLETE
 
 Objectives Achieved:
 
-* Color normalization helpers introduced in `product_extraction/common/color_utils.py`.
-* Color fallback slug generation centralized for approved product extraction color managers.
-* Color field splitting centralized for approved product extraction validation paths.
-* Active scraper color de-duplication behavior routed through a shared utility helper.
-* Existing public APIs and behavior preserved for approved Unit 6 files.
+* Final scraper and tracker utility audit completed.
+* Shared price selection logic centralized in `product_extraction/common/price_utils.py`.
+* Shared numeric price parsing centralized in `product_extraction/common/price_utils.py`.
+* Shared file glob lookup centralized in `product_extraction/common/file_utils.py`.
+* Compare-scans text, color, and file lookup helpers routed through shared utilities.
+* Price-tracker price parsing, Excel reads, and file lookup routed through shared utilities.
+* Existing package imports, direct imports, and direct-script execution preserved.
 
 Files Modified:
 
-* `product_extraction/common/color_utils.py`
-* `product_extraction/color_manager.py`
-* `product_extraction/scrapers/spec_scraper.py`
-* `product_extraction/utils/color_manager.py`
-
-Validation Status:
-
-* Compile validation passed.
-* Primary `ColorManager` behavior validation passed.
-* Utility `ColorManager` behavior validation passed.
-* `ColorParser` targeted behavior validation passed.
-* `git diff --check` passed with line-ending warnings only.
-
----
-
-## Unit 7 Progress Summary
-
-Status: Phase 5 complete
-
-Objectives Achieved:
-
-* Shared date helpers introduced in `product_extraction/common/date_utils.py`.
-* Shared price and number helpers introduced in `product_extraction/common/price_utils.py`.
-* Shared text parsing helpers introduced in `product_extraction/common/text_utils.py`.
-* `product_extraction/trackers/helpers.py` converted to compatibility wrappers over shared helpers.
-* `product_extraction/trackers/price_tracker.py` routed through shared helpers and removed duplicate legacy helper bodies.
-* `product_extraction/reports/dashboard_generator.py` routed dashboard date lookup through the shared date helper.
-* `product_extraction/trackers/report_generator.py` routed report directory creation and Excel writer setup through shared helpers.
-* Existing public APIs and behavior preserved for approved Unit 7 files.
-
-Files Modified:
-
-* `product_extraction/common/date_utils.py`
+* `product_extraction/common/file_utils.py`
 * `product_extraction/common/price_utils.py`
-* `product_extraction/common/text_utils.py`
-* `product_extraction/trackers/helpers.py`
+* `product_extraction/trackers/compare_scans.py`
 * `product_extraction/trackers/price_tracker.py`
-* `product_extraction/reports/dashboard_generator.py`
-* `product_extraction/trackers/report_generator.py`
 
 Validation Status:
 
-* Compile validation passed.
-* Shared helper regression checks passed.
-* Import validation passed for `product_extraction.trackers.helpers`, `product_extraction.trackers.price_tracker`, and `product_extraction.reports.dashboard_generator`.
-* Targeted dashboard shared date helper behavior check passed.
-* Targeted tracker report generator output checks passed.
+* `python -m py_compile` passed for all changed Python modules.
+* Package import validation passed.
+* Direct import validation passed.
+* Direct-script smoke validation passed for `product_extraction/trackers/compare_scans.py`.
+* Direct-script smoke validation passed for `product_extraction/trackers/price_tracker.py`.
 * `git diff --check` passed with line-ending warnings only.
 
----
+Repository State:
 
-## Current Repository State
+* Unit 8 branch is ahead of origin with completed migration commits.
+* `docs/unit8 progress report.txt` was intentionally left unchanged.
 
-Branch:
+Next Recommended Action:
 
-migration-unit-7-shared-utility-consolidation
-
-Latest Unit 7 Checkpoint:
-
-`02ede40` - Complete Unit 7 phase 5 report helper consolidation
-
-Working Tree:
-
-Clean after Unit 7 Phase 5 checkpoint commit.
+* Prepare final migration closure documentation and commit the doc updates.
 
 ---
-
-## Next Recommended Action
-
-Review remaining Unit 7 scope and decide whether Unit 7 can be closed or needs another explicitly scoped phase.
-
-No additional migration implementation changes are authorized until the next phase is explicitly approved.
-
----
-
-## Unit 7 Objectives
-
-Primary Scope:
-
-Shared helper consolidation after Units 1-6.
-
-Discovery Goals:
-
-1. Identify remaining reusable helpers in product extraction scope.
-2. Identify duplicated utility-style functions not already consolidated.
-3. Identify direct dependencies and direct consumers.
-4. Identify high-risk shared behavior and migration boundaries.
-5. Produce a phase-by-phase implementation plan.
-
----
-
-## Unit 7 Phase 3 Summary
-
-Status: COMPLETE
-
-Code Modified: YES
-
-Discovery Findings:
-
-* `product_extraction/trackers/helpers.py` now serves as a compatibility layer over shared helpers in `product_extraction/common/`.
-* `product_extraction/trackers/price_tracker.py` now uses shared date, price, number, and text helpers through local compatibility wrappers.
-* `product_extraction/common/date_utils.py`, `product_extraction/common/price_utils.py`, and `product_extraction/common/text_utils.py` are the first shared utility modules added for Unit 7.
-* `product_extraction/reports/dashboard_generator.py` remains unchanged in Phase 3.
-
-Phase 4 Recommended Scope:
-
-* Review `product_extraction/reports/dashboard_generator.py` for any remaining safe helper consolidation.
-* Keep fallback behavior intact.
-* Avoid modifying `product_extraction/utils/logger.py`, `product_extraction/trackers/compare_scans.py`, deferred directories, or unrelated modules.
-
----
-
-## Unit 7 Phase 4 Summary
-
-Status: COMPLETE
-
-Code Modified: YES
-
-Implementation Findings:
-
-* `product_extraction/reports/dashboard_generator.py` had one safe helper consolidation opportunity.
-* Dashboard date lookup now calls `product_extraction/common/date_utils.py` through the existing `common.date_utils` import path.
-* The existing Gregorian fallback behavior remains intact if shared date lookup fails.
-* No report template, tracker, logger, scraper, import builder, image processing, or unrelated files were modified.
-
-Files modified:
-
-* `product_extraction/reports/dashboard_generator.py`
-* `docs/MIGRATION_STATUS.md`
-* `docs/SESSION_HANDOFF.md`
-* `docs/SHARED_UTILITY_INVENTORY.md`
-
-Validation completed:
-
-* `python -m py_compile product_extraction/reports/dashboard_generator.py`
-* Targeted dashboard shared date helper behavior check
-* Import validation for `product_extraction.reports.dashboard_generator`
-* `git diff --check` passed with line-ending warnings only
-
----
-
-## Unit 7 Phase 5 Summary
-
-Status: COMPLETE
-
-Code Modified: YES
-
-Implementation Findings:
-
-* `product_extraction/trackers/report_generator.py` had a safe helper consolidation opportunity.
-* Existing direct directory creation now routes through `common.file_utils.ensure_directory`.
-* `generate_excel_report()` now uses the already-imported `common.excel_utils.excel_writer`.
-* Report filenames, sheet names, output paths, and return behavior were preserved.
-
-Files modified:
-
-* `product_extraction/trackers/report_generator.py`
-* `docs/MIGRATION_STATUS.md`
-* `docs/SESSION_HANDOFF.md`
-* `docs/SHARED_UTILITY_INVENTORY.md`
-
-Validation completed:
-
-* `python -m py_compile product_extraction/trackers/report_generator.py`
-* Import validation for `trackers.report_generator`
-* Targeted output checks for HTML report, Excel report, new-products workbook, and price-changes workbook
-* `git diff --check` passed with line-ending warnings only
-
----
-
-## Migration Rules
-
-* Preserve existing behavior.
-* Maintain output parity.
-* No functional changes unless explicitly approved.
-* Validate after every migration step.
-* Commit only after successful validation.
