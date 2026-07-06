@@ -22,6 +22,7 @@ from common.excel_utils import read_excel, excel_writer, write_dataframe
 from common.file_utils import safe_delete
 from common.progress_utils import load_json_state, save_json_state
 from common.color_utils import collect_unique_normalized_colors
+from common.price_utils import clean_price_text as _clean_price_text
 
 PROGRESS_FILE = 'scraper_progress.json'
 
@@ -234,23 +235,7 @@ def wait_for_page_load(driver, timeout=15):
 
 def clean_price(price_text):
     """استخراج قیمت و حذف کاما و تومان"""
-    if not price_text:
-        return ''
-    
-    # حذف تومان و ریال
-    price_text = price_text.replace('تومان', '').replace('ریال', '')
-    
-    # تبدیل اعداد فارسی به انگلیسی
-    persian_to_english = str.maketrans('۰۱۲۳۴۵۶۷۸۹', '0123456789')
-    price_text = price_text.translate(persian_to_english)
-    
-    # حذف کاما و جداکننده‌های هزارگان
-    price_text = price_text.replace(',', '').replace('٬', '').replace('،', '')
-    
-    # استخراج فقط اعداد
-    price = re.sub(r'[^\d]', '', price_text)
-    
-    return price
+    return _clean_price_text(price_text)
 
 def extract_price_smart(driver):
     """استخراج قیمت با روش‌های مختلف و هوشمند"""
@@ -1657,18 +1642,18 @@ if __name__ == "__main__":
     ╚═══════════════════════════════════════════════════════════════════╝
     """)
     
-required = ['selenium', 'pandas', 'openpyxl']
-missing = [pkg for pkg in required
-           if not __import__('importlib').util.find_spec(pkg)]
+    required = ['selenium', 'pandas', 'openpyxl']
+    missing = [pkg for pkg in required
+               if not __import__('importlib').util.find_spec(pkg)]
 
-if missing:
-    print("⚠ Missing packages:")
-    sys.stdout.flush()
-    for pkg in missing:
-        print(f"  - {pkg}")
-    print(f"\nInstall: pip install {' '.join(missing)}")
-else:
-    print("✓ All packages installed\n")
-    sys.stdout.flush()
-    main()
+    if missing:
+        print("⚠ Missing packages:")
+        sys.stdout.flush()
+        for pkg in missing:
+            print(f"  - {pkg}")
+        print(f"\nInstall: pip install {' '.join(missing)}")
+    else:
+        print("✓ All packages installed\n")
+        sys.stdout.flush()
+        main()
 

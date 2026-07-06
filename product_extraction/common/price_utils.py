@@ -65,6 +65,20 @@ def extract_price_from_text(text, min_value=1000, min_digits=None):
     return max(numbers) if numbers else None
 
 
+def clean_price_text(text):
+    """Return only normalized price digits from price text."""
+    if _is_missing(text) or text == "":
+        return ""
+
+    cleaned = normalize_digits(text)
+    cleaned = cleaned.replace("\u062a\u0648\u0645\u0627\u0646", "")
+    cleaned = cleaned.replace("\u0631\u06cc\u0627\u0644", "")
+    for separator in THOUSANDS_SEPARATORS + "\u060c":
+        cleaned = cleaned.replace(separator, "")
+
+    return re.sub(r"[^\d]", "", cleaned)
+
+
 def format_number(number):
     """Format a number with English comma separators."""
     if _is_missing(number) or number == "":
