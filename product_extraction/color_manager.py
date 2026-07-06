@@ -18,6 +18,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # ─── Shared Excel utilities (Unit 3) ───────────────────────────────
 from common.excel_utils import read_excel, excel_writer
 from common.file_utils import ensure_exists
+from common.color_utils import (
+    normalize_persian_color_text,
+    simple_color_slug,
+    split_color_values,
+)
 
 # ===========================
 # رنگ‌های پیش‌فرض (Fallback)
@@ -156,7 +161,7 @@ class ColorManager:
         
         # نرمال‌سازی متن
         color = str(persian_color).strip()
-        color = self._normalize_persian(color)
+        color = normalize_persian_color_text(color)
         
         # جستجوی در دیکشنری
         if color in self.color_dict:
@@ -172,20 +177,12 @@ class ColorManager:
     
     def _normalize_persian(self, text):
         """نرمال‌سازی متن فارسی"""
-        replacements = {
-            'ك': 'ک', 'ي': 'ی', 'ى': 'ی',
-            '‌': ' ', '\u200c': ' '
-        }
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        return ' '.join(text.split()).strip()
+        return normalize_persian_color_text(text)
     
     def _simple_transliterate(self, text):
         """تبدیل ساده برای رنگ‌های ناشناخته"""
-        import re
         # حذف کاراکترهای خاص و جایگزینی فاصله با خط تیره
-        text = re.sub(r'[^\w\s-]', '', text)
-        return text.strip().replace(' ', '-').lower()
+        return simple_color_slug(text)
     
     def add_color(self, persian, english, notes=''):
         """
@@ -252,11 +249,10 @@ class ColorManager:
                 continue
             
             # جدا کردن رنگ‌ها (با - یا | یا ,)
-            import re
-            colors = [c.strip() for c in re.split(r'\s*[-|,]\s*', colors_str) if c.strip()]
+            colors = split_color_values(colors_str)
             
             for color in colors:
-                color_normalized = self._normalize_persian(color)
+                color_normalized = normalize_persian_color_text(color)
                 if color_normalized not in self.color_dict:
                     unknown_colors.add(color_normalized)
         

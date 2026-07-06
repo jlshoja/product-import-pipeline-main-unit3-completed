@@ -44,6 +44,42 @@ High (used throughout extraction and import workflows)
 * Mapping file loading
 * Similarity calculations
 
+## Status
+
+PARTIAL COMPLETE within approved Unit 6 product_extraction scope.
+
+Implemented:
+
+```text
+product_extraction/common/color_utils.py
+```
+
+Unit 6 centralized shared helpers for:
+
+```python
+normalize_persian_color_text()
+simple_color_slug()
+split_color_values()
+collect_unique_normalized_colors()
+```
+
+Approved consumers migrated:
+
+```text
+product_extraction/color_manager.py
+product_extraction/utils/color_manager.py
+product_extraction/scrapers/spec_scraper.py
+```
+
+Deferred:
+
+```text
+import_builder/color_manager.py
+import_builder/color_mapping.xlsx
+image_processing/
+product_extraction/scrapers/Old/
+```
+
 ## Migration Complexity
 
 Medium
@@ -54,6 +90,12 @@ Create:
 
 ```text
 shared/color_manager.py
+```
+
+Current migration implementation uses:
+
+```text
+product_extraction/common/color_utils.py
 ```
 
 Expose:

@@ -1,292 +1,151 @@
+# SESSION HANDOFF
 
+## Session Status
 
-\# SESSION HANDOFF
+Unit 6 - Color Management Consolidation completed.
 
+Project is ready to begin Unit 7 Discovery.
 
+---
 
-\## Session Status
+## Current Branch
 
+migration-unit-6-color-management-consolidation
 
+---
 
-Unit 5 completed.
+## Current Commit
 
+Pending
 
+---
 
-Project is ready to begin Unit 6 Discovery.
+## Repository State
 
-
-
-\---
-
-
-
-\## Current Branch
-
-
-
-migration-unit-5-progress-tracking-consolidation
-
-
-
-\---
-
-
-
-\## Current Commit
-
-
-
-<REPLACE\_WITH\_ACTUAL\_COMMIT>
-
-
-
-\---
-
-
-
-\## Repository State
-
-
-
-Working Tree: Clean
-
-
+Working Tree: Unit 6 changes pending commit
 
 Validation Status: Passed
 
-
-
 Ready For Next Unit: YES
 
+---
 
+## Completed Units
 
-\---
-
-
-
-\## Completed Units
-
-
-
-\### Unit 1 – Path Foundation
-
-
+### Unit 1 - Path Foundation
 
 Completed and validated.
 
-
-
-\### Unit 2 – Configuration Centralization
-
-
+### Unit 2 - Configuration Centralization
 
 Completed and validated.
 
-
-
-\### Unit 3 – Excel Operations Consolidation
-
-
+### Unit 3 - Excel Operations Consolidation
 
 Completed and validated.
 
-
-
-\### Unit 4 – File Operations Consolidation
-
-
+### Unit 4 - File Operations Consolidation
 
 Completed and validated.
 
-
-
-\### Unit 5 – Progress Tracking Consolidation
-
-
+### Unit 5 - Progress Tracking Consolidation
 
 Completed and validated.
 
+### Unit 6 - Color Management Consolidation
 
+Completed and validated.
 
-\---
+---
 
+## Unit 6 Work Completed
 
+Files changed:
 
-\## Validation Completed
+* `product_extraction/common/color_utils.py`
+* `product_extraction/color_manager.py`
+* `product_extraction/scrapers/spec_scraper.py`
+* `product_extraction/utils/color_manager.py`
+* `docs/MIGRATION_STATUS.md`
+* `docs/SESSION_HANDOFF.md`
+* `docs/SHARED_UTILITY_INVENTORY.md`
+* `docs/FILE_DEPENDENCIES.md`
 
+Summary:
 
+* Added shared color utility helpers.
+* Migrated approved product extraction color manager normalization, fallback slugging, and validation splitting to shared helpers.
+* Migrated active scraper color de-duplication to a shared helper.
+* Kept public APIs and behavior unchanged.
 
-\* Compile validation
+---
 
-\* Import validation
+## Validation Completed
 
-\* Runtime validation
+* Compile validation
+* Primary `ColorManager` behavior validation
+* Utility `ColorManager` behavior validation
+* Targeted `ColorParser` behavior validation
+* Diff whitespace validation
 
-\* Progress persistence validation
+---
 
-\* Resume validation
+## Open Risks
 
-\* Recovery validation
-
-\* Regression validation
-
-
-
-\---
-
-
-
-\## Open Risks
-
-
-
-\### Deferred Consumers
-
-
+### Deferred Consumers
 
 The following directories remain outside current migration scope and must not be modified unless explicitly approved:
 
+* `import_builder/`
+* `image_processing/`
 
+### Remaining Color Risks
 
-\* import\_builder/
+* `import_builder/color_manager.py` still contains a separate color management implementation.
+* `product_extraction/scrapers/Old/` was intentionally not migrated.
+* Duplicate mapping files remain: `product_extraction/color_mapping.xlsx` and `import_builder/color_mapping.xlsx`.
 
-\* image\_processing/
+---
 
+## Next Recommended Action
 
-
-\### Unit 6 Risks
-
-
-
-Color processing may affect:
-
-
-
-\* Product generation
-
-\* Attribute generation
-
-\* Mapping accuracy
-
-\* Output consistency
-
-
-
-Output parity must be maintained throughout migration.
-
-
-
-\---
-
-
-
-\## Next Recommended Action
-
-
-
-Start Unit 6 Discovery.
-
-
+Start Unit 7 Discovery.
 
 Discovery must be completed before any implementation work.
 
+---
 
-
-\---
-
-
-
-\## Unit 6 Discovery Scope
-
-
+## Unit 7 Discovery Scope
 
 Primary Target:
 
-
-
-product\_extraction/color\_manager.py
-
-
+Shared utility consolidation after Units 1-6.
 
 Discovery Tasks:
 
+1. Inventory remaining reusable helpers.
+2. Identify duplicate utility functions.
+3. Identify approved product extraction consumers.
+4. Identify migration boundaries and deferred directories.
+5. Produce phased implementation and validation plan.
 
+---
 
-1\. Inventory all color mapping sources.
+## Files Required For Unit 7 Discovery
 
-2\. Inventory all color translation logic.
+* `docs/MIGRATION_OPERATIONAL_GUIDE.md`
+* `docs/MIGRATION_EXECUTION_ROADMAP.md`
+* `docs/MIGRATION_STATUS.md`
+* `docs/SESSION_HANDOFF.md`
+* `docs/SHARED_UTILITY_INVENTORY.md`
+* `docs/FILE_DEPENDENCIES.md`
+* `product_extraction/common/`
+* Approved product extraction modules only, discovered phase-by-phase
 
-3\. Inventory all normalization logic.
+---
 
-4\. Inventory all validation logic.
+## Ready State
 
-5\. Identify duplicate code.
+Unit 7 Discovery Authorized: YES
 
-6\. Build dependency map.
-
-7\. Propose shared utility design.
-
-8\. Produce implementation plan.
-
-
-
-\---
-
-
-
-\## Files Required For Discovery
-
-
-
-docs/MIGRATION\_OPERATIONAL\_GUIDE.md
-
-
-
-docs/MIGRATION\_EXECUTION\_ROADMAP.md
-
-
-
-docs/MIGRATION\_STATUS.md
-
-
-
-docs/SESSION\_HANDOFF.md
-
-
-
-docs/SHARED\_UTILITY\_INVENTORY.md
-
-
-
-docs/FILE\_DEPENDENCIES.md
-
-
-
-product\_extraction/color\_manager.py
-
-
-
-All direct dependencies of color\_manager.py
-
-
-
-All direct consumers of color\_manager.py
-
-
-
-\---
-
-
-
-\## Ready State
-
-
-
-Unit 6 Discovery Authorized: YES
-
-
-
-Unit 6 Implementation Authorized: NO
-
-
-
+Unit 7 Implementation Authorized: NO

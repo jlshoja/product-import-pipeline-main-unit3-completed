@@ -8,44 +8,51 @@ Migration Execution
 
 ## Current Branch
 
-migration-unit-5-progress-tracking-consolidation
+migration-unit-6-color-management-consolidation
 
 ---
 
 ## Migration Progress
 
-| Unit                                     | Status   |
-| ---------------------------------------- | -------- |
-| Unit 1 – Path Foundation                 | COMPLETE |
-| Unit 2 – Configuration Centralization    | COMPLETE |
-| Unit 3 – Excel Operations Consolidation  | COMPLETE |
-| Unit 4 – File Operations Consolidation   | COMPLETE |
-| Unit 5 – Progress Tracking Consolidation | COMPLETE |
-| Unit 6 – Color Management Consolidation  | NEXT     |
-| Unit 7+                                  | PENDING  |
+| Unit | Status |
+| --- | --- |
+| Unit 1 - Path Foundation | COMPLETE |
+| Unit 2 - Configuration Centralization | COMPLETE |
+| Unit 3 - Excel Operations Consolidation | COMPLETE |
+| Unit 4 - File Operations Consolidation | COMPLETE |
+| Unit 5 - Progress Tracking Consolidation | COMPLETE |
+| Unit 6 - Color Management Consolidation | COMPLETE |
+| Unit 7 - Shared Utility Consolidation | NEXT |
+| Unit 8 - Core Processing Logic Migration | PENDING |
 
 ---
 
-## Unit 5 Completion Summary
+## Unit 6 Completion Summary
 
 Status: COMPLETE
 
 Objectives Achieved:
 
-* Progress tracking responsibilities consolidated.
-* Duplicate progress management logic reduced.
-* Shared progress utilities centralized where approved.
-* Existing application behavior preserved.
-* Migration scope completed according to approved Unit 5 plan.
+* Color normalization helpers introduced in `product_extraction/common/color_utils.py`.
+* Color fallback slug generation centralized for approved product extraction color managers.
+* Color field splitting centralized for approved product extraction validation paths.
+* Active scraper color de-duplication behavior routed through a shared utility helper.
+* Existing public APIs and behavior preserved for approved Unit 6 files.
+
+Files Modified:
+
+* `product_extraction/common/color_utils.py`
+* `product_extraction/color_manager.py`
+* `product_extraction/scrapers/spec_scraper.py`
+* `product_extraction/utils/color_manager.py`
 
 Validation Status:
 
 * Compile validation passed.
-* Import validation passed.
-* Runtime validation passed.
-* Progress persistence validation passed.
-* Resume workflow validation passed.
-* Regression validation passed.
+* Primary `ColorManager` behavior validation passed.
+* Utility `ColorManager` behavior validation passed.
+* `ColorParser` targeted behavior validation passed.
+* `git diff --check` passed with line-ending warnings only.
 
 ---
 
@@ -53,46 +60,43 @@ Validation Status:
 
 Branch:
 
-migration-unit-5-progress-tracking-consolidation
+migration-unit-6-color-management-consolidation
 
 Commit:
 
-<REPLACE_WITH_ACTUAL_COMMIT>
+Pending
 
 Working Tree:
 
-Clean
+Contains Unit 6 code and documentation changes pending commit.
 
 ---
 
 ## Next Recommended Action
 
-Begin Unit 6 – Color Management Consolidation
+Begin Unit 7 - Shared Utility Consolidation
 
 Required First Step:
 
 Discovery Only
 
-No implementation changes are authorized until discovery and implementation plan are completed and approved.
+No Unit 7 implementation changes are authorized until discovery and implementation plan are completed and approved.
 
 ---
 
-## Unit 6 Objectives
+## Unit 7 Objectives
 
-Primary Target:
+Primary Scope:
 
-product_extraction/color_manager.py
+Shared helper consolidation after Units 1-6.
 
 Discovery Goals:
 
-1. Identify all color mapping sources.
-2. Identify all color translation logic.
-3. Identify all normalization logic.
-4. Identify all validation logic.
-5. Identify duplicate implementations.
-6. Identify dependency graph.
-7. Design shared utility opportunities.
-8. Produce implementation plan.
+1. Identify remaining reusable helpers in product extraction scope.
+2. Identify duplicated utility-style functions not already consolidated.
+3. Identify direct dependencies and direct consumers.
+4. Identify high-risk shared behavior and migration boundaries.
+5. Produce a phase-by-phase implementation plan.
 
 ---
 

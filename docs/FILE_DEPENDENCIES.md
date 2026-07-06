@@ -174,6 +174,16 @@ Current Locations:
 
 \* import\_builder/color\_mapping.xlsx
 
+Unit 6 Status:
+
+\* Product extraction color helper logic was partially consolidated in `product_extraction/common/color_utils.py`.
+
+\* Approved product extraction color consumers now share normalization, fallback slugging, splitting, and de-duplication helpers.
+
+\* Mapping file sources were not consolidated in Unit 6.
+
+\* `import_builder/` remains deferred and must not be modified without explicit approval.
+
 
 
 Risk:
@@ -359,6 +369,5 @@ Recommendation:
 
 
 Configuration centralization should be completed before major architectural migration activities begin.
-
 
 

@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.excel_utils import read_excel, excel_writer, write_dataframe
 from common.file_utils import safe_delete
 from common.progress_utils import load_json_state, save_json_state
+from common.color_utils import collect_unique_normalized_colors
 
 PROGRESS_FILE = 'scraper_progress.json'
 
@@ -169,19 +170,7 @@ class ColorParser:
     
     def parse_colors(self, colors_list):
         """تبدیل لیست رنگ‌ها به فرمت استاندارد"""
-        if not colors_list:
-            return []
-        
-        standardized = []
-        seen = set()
-        
-        for color in colors_list:
-            normalized = self.normalize_color(color)
-            if normalized and normalized.lower() not in seen:
-                standardized.append(normalized)
-                seen.add(normalized.lower())
-        
-        return standardized
+        return collect_unique_normalized_colors(colors_list, self.normalize_color)
 
 
 def setup_driver():
