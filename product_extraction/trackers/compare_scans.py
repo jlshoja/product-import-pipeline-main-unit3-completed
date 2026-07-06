@@ -27,6 +27,7 @@ from common.excel_utils import (
     auto_width,
     set_fill,
 )
+from common.file_utils import find_latest_dated
 
 
 def normalize_text(s):
@@ -73,20 +74,12 @@ def effective_price(regular, sale):
 
 
 def find_latest_scan(folder):
-    pattern = os.path.join(folder, "product_details_*.xlsx")
-    files = glob.glob(pattern)
-    if not files:
-        return None
-    date_re = re.compile(r"product_details_(\d{8}_\d{6})\.xlsx$")
-    dated = []
-    for f in files:
-        m = date_re.search(os.path.basename(f))
-        if m:
-            dated.append((m.group(1), f))
-    if not dated:
-        return None
-    dated.sort(key=lambda x: x[0])
-    return dated[-1][1]
+    latest = find_latest_dated(
+        folder,
+        "product_details_*.xlsx",
+        r"product_details_(\d{8}_\d{6})\.xlsx$",
+    )
+    return str(latest) if latest else None
 
 
 def find_links_file(folder):
@@ -99,20 +92,13 @@ def find_links_file(folder):
 
 
 def find_latest_woo_file(folder):
-    pattern = os.path.join(folder, "**", "woocommerce_import_*.csv")
-    files = glob.glob(pattern, recursive=True)
-    if not files:
-        return None
-    date_re = re.compile(r"woocommerce_import_(\d{8})_\d+\.csv$")
-    dated = []
-    for f in files:
-        m = date_re.search(os.path.basename(f))
-        if m:
-            dated.append((m.group(1), f))
-    if not dated:
-        return None
-    dated.sort(key=lambda x: x[0])
-    return dated[-1][1]
+    latest = find_latest_dated(
+        folder,
+        "woocommerce_import_*.csv",
+        r"woocommerce_import_(\d{8})_\d+\.csv$",
+        recursive=True,
+    )
+    return str(latest) if latest else None
 
 
 # ─── بارگذاری WooCommerce ──────────────────────────────────────────
