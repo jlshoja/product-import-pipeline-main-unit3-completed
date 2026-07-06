@@ -2,103 +2,92 @@
 
 ## Current Branch
 
-migration-unit-3-excel-operations-consolidation
+migration-unit-4-file-operations-consolidation
 
 ## Current Commit
 
-3eb2537
+68a9031
 
 ## Current Status
 
-Unit 3 (Excel Operations Consolidation) — all in-scope product_extraction/ consumers migrated.
+Unit 4 - File Operations Consolidation is complete within the approved scope.
 
-Six consumers migrated to the shared excel_utils module with full backward compatibility and both execution modes validated. The import_builder/ and image_processing/ consumers are deferred to a later unit (cross-directory sys.path strategy required).
+Unit 5 - Progress Tracking Consolidation is the next migration unit.
 
 ## Completed Work
 
-### Unit 1 — Path Foundation
+### Unit 1 - Path Foundation
 
 Completed and validated.
 
-### Unit 2 — Configuration Centralization
+### Unit 2 - Configuration Centralization
 
 Completed and validated.
 
-### Unit 3 — Excel Operations Consolidation (in progress)
+### Unit 3 - Excel Operations Consolidation
 
-Restarted using a foundation-first, single-consumer strategy.
+Completed within product_extraction scope.
 
-Completed this restart:
+Deferred:
 
-* Created product_extraction/common/excel_utils.py
-  - Shared I/O wrappers (read_excel, write_dataframe, excel_writer, load_workbook)
-  - Consolidated style constants (GREEN_FILL, RED_FILL, YELLOW_FILL, THIN_BORDER, etc.)
-  - Shared helper functions (style_header, auto_width, set_fill)
-* Migrated product_extraction/trackers/compare_scans.py
-* Migrated product_extraction/trackers/report_generator.py
+* import_builder/ scripts - needs cross-directory sys.path strategy
+* image_processing/ scripts - needs cross-directory sys.path strategy
+
+### Unit 4 - File Operations Consolidation
+
+Completed this session:
+
+* Created product_extraction/common/file_utils.py
+* Added ensure_exists(), ensure_directory(), safe_copy(), safe_delete()
 * Migrated product_extraction/trackers/price_tracker.py
-* Migrated product_extraction/scrapers/spec_scraper.py
 * Migrated product_extraction/scrapers/link_scraper.py
 * Migrated product_extraction/color_manager.py
-
-## Unit 3 Remaining Work
-
-All in-scope product_extraction/ consumers are migrated.
-
-Deferred (separate directory trees):
-
-* import_builder/ scripts — needs cross-directory sys.path strategy
-* image_processing/ scripts — needs cross-directory sys.path strategy
+* Migrated product_extraction/scrapers/spec_scraper.py
+* Added find_latest_dated()
+* Migrated product_extraction/trackers/compare_scans.py latest-file wrappers
+* Deferred import_builder/ and image_processing/ consumers per approved plan
 
 ## Validation Performed
 
-* Git commits are small and reversible (one consumer per commit)
-* Compile validation passed for all migrated files
-* Import validation passed in main.py execution mode
-* Import validation passed in direct-script execution mode
-* main.py --help remains functional after every migration step
-* Shared symbols verified as identical references (assert ... is ...)
-
-## Import Compatibility Strategy
-
-The approved pattern for direct-script execution is:
-
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-applied at the top of each tracker script. This resolves to product_extraction/ regardless of CWD, making from common.excel_utils import ... work in both execution modes.
+* Compile validation passed for modified Python files
+* Import validation passed for modified modules
+* find_latest_scan() and find_latest_woo_file() wrapper behavior validated with temporary dated files
+* Validation-generated root color_mapping.xlsx was removed
 
 ## Open Risks
 
 ### Cross-Directory Consumers
 
-import_builder/ and image_processing/ cannot import common.excel_utils without adding product_extraction/ to sys.path. These are deferred to a later unit pending a cross-directory import strategy.
+import_builder/ and image_processing/ remain deferred until a cross-directory shared utility strategy is approved.
 
-### Scraper Consumers
+### Unit 5 Progress Flows
 
-spec_scraper.py and link_scraper.py are imported by main.py as scrapers.spec_scraper / scrapers.link_scraper and may also be run directly. Migration must validate both modes.
+Unit 5 touches resume and state recovery behavior. Discovery should identify progress files, state schemas, reset behavior, and validation scenarios before implementation.
 
 ## Recommended Next Action
 
-Unit 3 core work (product_extraction scope) is complete. Recommended next:
+Start Unit 5 discovery/design only:
 
-1. Tag Unit 3 milestone (e.g. migration-unit-3-core-complete).
-2. Decide whether import_builder/ and image_processing/ Excel consumers belong in a later shared-utility unit per SHARED_UTILITY_PLAN.
-3. Begin Unit 4 (File Operations Consolidation) per the migration execution order.
+1. Inventory progress/state persistence in link_scraper.py, spec_scraper.py, and Image_Downloader.py.
+2. Identify shared helper surface for load/save/reset/recovery.
+3. Propose one-phase-at-a-time implementation plan for approval.
 
 ## Repository State
 
 Branch:
 
-migration-unit-3-excel-operations-consolidation
+migration-unit-4-file-operations-consolidation
 
 HEAD:
 
-3eb2537
+68a9031
 
 Working Tree:
 
-Clean
+Contains one pre-existing unrelated modification:
 
-Ready For Next Session:
+* Project_Prompts/Prompt 1 - Start of Every Session.md
+
+Ready For Unit 5 Discovery:
 
 YES

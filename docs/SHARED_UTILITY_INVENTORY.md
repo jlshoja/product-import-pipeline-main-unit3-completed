@@ -188,6 +188,8 @@ spec_scraper.py
 Image_Downloader.py
 ```
 
+Status: NEXT - Unit 5 discovery/design pending.
+
 ## Usage Count
 
 Medium
@@ -241,6 +243,8 @@ Priority: High
 
 Many modules.
 
+Status: COMPLETE within Unit 4 approved product_extraction scope.
+
 ## Usage Count
 
 Very High
@@ -282,6 +286,14 @@ safe_delete()
 safe_move()
 ```
 
+Implemented:
+
+```text
+product_extraction/common/file_utils.py
+```
+
+Unit 4 added ensure_exists(), ensure_directory(), safe_copy(), safe_delete(), and migrated approved product_extraction consumers.
+
 Priority: High
 
 ---
@@ -291,6 +303,8 @@ Priority: High
 ## Location
 
 Throughout repository.
+
+Status: PARTIAL - Unit 4 added dated file lookup only; broader path construction remains deferred.
 
 ## Usage Count
 

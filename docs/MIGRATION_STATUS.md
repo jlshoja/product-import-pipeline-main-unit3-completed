@@ -6,100 +6,59 @@ Migration Execution
 
 ## Current Branch
 
-migration-unit-3-excel-operations-consolidation
+migration-unit-4-file-operations-consolidation
 
 ## Migration Progress
 
 ### Completed Units
 
-#### Unit 1 — Path Foundation
+#### Unit 1 - Path Foundation
 
 Status: COMPLETE
 
-Completed Work:
-
-* Centralized path registry introduced
-* Path usage standardized
-* Path-related validation completed
-* Regression testing completed
-
-Validation:
-
-* Compile validation passed
-* Runtime validation passed
-
-Git References:
-
-* Branch: migration-unit-1-path-foundation
-* Tag: migration-phase-1-complete-complete
-
----
-
-#### Unit 2 — Configuration Centralization
+#### Unit 2 - Configuration Centralization
 
 Status: COMPLETE
 
+#### Unit 3 - Excel Operations Consolidation
+
+Status: COMPLETE within product_extraction scope
+
+Deferred:
+
+* import_builder/ Excel consumers - cross-directory import strategy required
+* image_processing/ Excel consumers - cross-directory import strategy required
+
+#### Unit 4 - File Operations Consolidation
+
+Status: COMPLETE within approved scope
+
 Completed Work:
 
-* Configuration registry foundation created
-* Centralized configuration layer implemented
-* Configuration adapters added
-* File registry helpers added
+* Created product_extraction/common/file_utils.py
+* Added ensure_exists(), ensure_directory(), safe_copy(), safe_delete()
+* Migrated price_tracker.py reports directory creation to ensure_directory()
+* Migrated link_scraper.py fresh-start cleanup to safe_delete()
+* Migrated product_extraction/color_manager.py existence checks to ensure_exists()
+* Migrated spec_scraper.py progress cleanup to safe_delete()
+* Added find_latest_dated()
+* Migrated compare_scans.py find_latest_scan() and find_latest_woo_file() as thin wrappers
+* Deferred import_builder/ and image_processing/ file-operation consumers per approved plan
 
 Validation:
 
-* Compile validation passed
-* Runtime validation passed
+* Compile validation passed for all modified Python files
+* Import validation passed for all modified modules
+* Functional wrapper check passed for latest scan and WooCommerce file patterns
 
 Git References:
 
-* Branch: migration-unit-2-configuration-centralization
-* Tag: migration-unit-2-complete
-
----
-
-### Current Unit
-
-#### Unit 3 — Excel Operations Consolidation
-
-Status: CORE CONSUMERS COMPLETE (within product_extraction)
-
-Notes:
-
-Initial Unit 3 implementation was attempted and later rolled back due to import compatibility regressions discovered during runtime testing.
-
-Unit 3 has been restarted using a new strategy: foundation-first, single-consumer migration, validated in both execution modes before each commit.
-
-Completed Work (this restart):
-
-* Created product_extraction/common/excel_utils.py (shared I/O wrappers + consolidated style constants + style helper functions)
-* Migrated product_extraction/trackers/compare_scans.py to shared excel_utils
-* Migrated product_extraction/trackers/report_generator.py to shared excel_utils
-* Migrated product_extraction/trackers/price_tracker.py to shared excel_utils
-* Migrated product_extraction/scrapers/spec_scraper.py to shared excel_utils
-* Migrated product_extraction/scrapers/link_scraper.py to shared excel_utils
-* Migrated product_extraction/color_manager.py to shared excel_utils
-
-All in-scope product_extraction/ consumers are now migrated.
-
-Remaining Work (deferred to later unit):
-
-* import_builder/ scripts (DEFERRED — separate directory tree, needs cross-directory sys.path strategy)
-* image_processing/ scripts (DEFERRED — separate directory tree)
-
-Validation (this restart):
-
-* Compile validation passed for all migrated files
-* AST parse validation passed for all migrated files
-* Import validation passed in main.py execution mode
-* Import validation passed in direct-script execution mode (compare_scans, report_generator)
-* main.py bootstrap remains functional after every migration step
-* Shared symbols verified as identical references (assert ... is ...)
-* color_manager functional check: PASS (ColorManager class loadable)
-
-Current HEAD:
-
-3eb2537
+* 7e4b907 Add shared file operation utilities
+* 1e1120a Use file utility for price tracker reports directory
+* 971cdbf Use file utility for link scraper cleanup
+* 335b942 Use file utility for color mapping checks
+* aff99b8 Use file utility for spec scraper progress cleanup
+* 68a9031 Add dated file lookup utility
 
 ---
 
@@ -107,24 +66,27 @@ Current HEAD:
 
 Branch:
 
-migration-unit-3-excel-operations-consolidation
+migration-unit-4-file-operations-consolidation
 
 HEAD:
 
-3eb2537
+68a9031
 
 Working Tree:
 
-Clean
+Contains one pre-existing unrelated modification:
+
+* Project_Prompts/Prompt 1 - Start of Every Session.md
 
 ---
 
 ## Next Recommended Action
 
-All in-scope product_extraction/ consumers are migrated. Unit 3 core work is complete within the product_extraction tree.
+Begin Unit 5 - Progress Tracking Consolidation.
 
-Recommended next:
+Before implementation:
 
-* Close Unit 3 (product_extraction scope) and tag the milestone.
-* Begin Unit 4 (File Operations Consolidation) per the migration execution order.
-* Defer import_builder/ and image_processing/ Excel consolidation to a cross-directory shared utility unit (per SHARED_UTILITY_PLAN).
+* Perform Unit 5 discovery/design only.
+* Identify progress/state files and resume flows.
+* Produce a phase plan for approval.
+* Do not modify consumers until the Unit 5 plan is approved.
