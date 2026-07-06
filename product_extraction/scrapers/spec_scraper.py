@@ -6,7 +6,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import pandas as pd
-import json
 import os
 import sys
 from pathlib import Path
@@ -21,6 +20,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # ─── Shared Excel utilities (Unit 3) ───────────────────────────────
 from common.excel_utils import read_excel, excel_writer, write_dataframe
 from common.file_utils import safe_delete
+from common.progress_utils import load_json_state, save_json_state
+
+PROGRESS_FILE = 'scraper_progress.json'
 
 # ✅ Import ColorManager for final standardization
 try:
@@ -1111,8 +1113,7 @@ def save_progress(current_index, total, output_file='progress.json'):
         'output_file': output_file
     }
     try:
-        with open('scraper_progress.json', 'w', encoding='utf-8') as f:
-            json.dump(progress_data, f, ensure_ascii=False, indent=2)
+        save_json_state(PROGRESS_FILE, progress_data)
         print(f"  💾 Progress saved: {current_index}/{total}")
     except Exception as e:
         print(f"  ⚠ Could not save progress: {e}")
@@ -1121,16 +1122,15 @@ def save_progress(current_index, total, output_file='progress.json'):
 def load_progress():
     """Load progress from previous run"""
     try:
-        if os.path.exists('scraper_progress.json'):
-            with open('scraper_progress.json', 'r', encoding='utf-8') as f:
-                progress_data = json.load(f)
-            print(f"\n📂 Found previous progress:")
-            sys.stdout.flush()
-            print(f"   Last processed: {progress_data['last_processed_index']}/{progress_data['total_products']}")
-            sys.stdout.flush()
-            print(f"   Timestamp: {progress_data['timestamp']}")
-            return progress_data
-        return None
+        if not os.path.exists(PROGRESS_FILE):
+            return None
+        progress_data = load_json_state(PROGRESS_FILE)
+        print(f"\n📂 Found previous progress:")
+        sys.stdout.flush()
+        print(f"   Last processed: {progress_data['last_processed_index']}/{progress_data['total_products']}")
+        sys.stdout.flush()
+        print(f"   Timestamp: {progress_data['timestamp']}")
+        return progress_data
     except Exception as e:
         print(f"  ⚠ Could not load progress: {e}")
         sys.stdout.flush()
@@ -1139,7 +1139,7 @@ def load_progress():
 def clear_progress():
     """Clear progress file after completion"""
     try:
-        if safe_delete('scraper_progress.json', missing_ok=False):
+        if safe_delete(PROGRESS_FILE, missing_ok=False):
             print("\n🗑️  Progress file cleared")
     except:
         pass
