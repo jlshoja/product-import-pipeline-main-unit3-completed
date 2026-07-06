@@ -7,8 +7,13 @@ Implementations live in product_extraction.common after Unit 7 shared
 utility consolidation.
 """
 
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, Tuple
+
+# Enable direct-script execution
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 try:
     from common.date_utils import get_persian_date as _get_persian_date
