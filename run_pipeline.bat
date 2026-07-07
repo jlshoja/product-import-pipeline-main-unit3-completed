@@ -62,7 +62,12 @@ echo   3. Track Prices
 echo   4. Generate Dashboard
 echo.
 pause
-python product_extraction\main.py full
+REM NOTE: pushd/popd kept as an extra safety net (defense in depth) even
+REM though the underlying Python scripts now resolve their file paths
+REM relative to the project root instead of the current working directory.
+pushd product_extraction
+python main.py full
+popd
 call :PAUSE_RETURN
 
 :SCRAPE_LINKS
@@ -72,7 +77,9 @@ echo ===========================================================================
 echo Scraping Product Links
 echo ============================================================================
 echo.
-python product_extraction\main.py scrape-links
+pushd product_extraction
+python main.py scrape-links
+popd
 call :PAUSE_RETURN
 
 :SCRAPE_SPECS
@@ -82,7 +89,9 @@ echo ===========================================================================
 echo Scraping Product Specifications
 echo ============================================================================
 echo.
-python product_extraction\main.py scrape-specs
+pushd product_extraction
+python main.py scrape-specs
+popd
 call :PAUSE_RETURN
 
 :COMPARE_SCANS
@@ -92,7 +101,9 @@ echo ===========================================================================
 echo Comparing Scans
 echo ============================================================================
 echo.
-python product_extraction\trackers\compare_scans.py
+pushd product_extraction
+python trackers\compare_scans.py
+popd
 call :PAUSE_RETURN
 
 :TRACK_PRICES
@@ -102,7 +113,9 @@ echo ===========================================================================
 echo Tracking Prices
 echo ============================================================================
 echo.
-python product_extraction\main.py track
+pushd product_extraction
+python main.py track
+popd
 call :PAUSE_RETURN
 
 :DASHBOARD
@@ -112,7 +125,9 @@ echo ===========================================================================
 echo Generating Dashboard
 echo ============================================================================
 echo.
-python product_extraction\main.py dashboard
+pushd product_extraction
+python main.py dashboard
+popd
 call :PAUSE_RETURN
 
 :WEB_PANEL

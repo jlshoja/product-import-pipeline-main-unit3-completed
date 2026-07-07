@@ -25,14 +25,21 @@ from common.excel_utils import read_excel, write_dataframe
 from common.file_utils import safe_delete
 from common.progress_utils import load_json_state, save_json_state
 
+# ─── مسیر ریشه پروژه (مستقل از cwd) ────────────────────────────────
+# قبلاً این مسیرها نسبت به پوشه‌ی جاری اجرا (cwd) خوانده می‌شدند؛ حالا
+# نسبت به ریشه‌ی پروژه (ROOT_DIR) محاسبه می‌شوند تا صرف‌نظر از اینکه
+# اسکریپت از کجا صدا زده شود (مثلاً از یک .bat بیرون از پوشه پروژه)
+# درست کار کند.
+from common.path_registry import ROOT_DIR
+
 # ─────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────
-PROGRESS_FILE   = 'link_scraper_progress.json'    # full run state
-CHECKPOINT_FILE = 'checkpoint.xlsx'  # incremental checkpoint after each URL
-ERROR_LOG_FILE  = 'errors.log'       # all errors
-INPUT_FILE      = 'archive_urls.xlsx'
-OUTPUT_FILE     = 'extracted_products.xlsx'
+PROGRESS_FILE   = str(ROOT_DIR / 'link_scraper_progress.json')   # full run state
+CHECKPOINT_FILE = str(ROOT_DIR / 'checkpoint.xlsx')              # incremental checkpoint after each URL
+ERROR_LOG_FILE  = str(ROOT_DIR / 'errors.log')                   # all errors
+INPUT_FILE      = str(ROOT_DIR / 'archive_urls.xlsx')
+OUTPUT_FILE     = str(ROOT_DIR / 'extracted_products.xlsx')
 
 # Run modes
 MODE_FRESH        = '1'  # start fresh
