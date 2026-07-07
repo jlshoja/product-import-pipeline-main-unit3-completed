@@ -21,10 +21,11 @@ import re
 sys.path.insert(0, os.path.dirname(__file__))
 
 try:
-    from paths import COLOR_MAPPING_FILE, PRODUCT_NAMES_FILE
+    from paths import COLOR_MAPPING_FILE, PRODUCT_NAMES_FILE, IMPORT_BUILDER_UPLOADS_DIR
 except ImportError:
     COLOR_MAPPING_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'color_mapping.xlsx')
     PRODUCT_NAMES_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'product_names.xlsx')
+    IMPORT_BUILDER_UPLOADS_DIR = Path(__file__).resolve().parent.parent / 'runtime' / 'cache' / 'import_builder' / 'uploads'
 
 # Import Image Naming v11 (Color Matching from Filename)
 try:
@@ -460,9 +461,8 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     # ذخیره CSV
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     date_str = datetime.now().strftime('%Y%m%d')
-    uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '4_Product_import', 'uploads')
-    if not os.path.exists(uploads_dir):
-        uploads_dir = 'uploads'
+    uploads_dir = str(IMPORT_BUILDER_UPLOADS_DIR)
+    os.makedirs(uploads_dir, exist_ok=True)
     output_folder = os.path.join(uploads_dir, date_str)
     os.makedirs(output_folder, exist_ok=True)
     output_csv = os.path.join(output_folder, f"woocommerce_import_{timestamp}.csv")

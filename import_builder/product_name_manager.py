@@ -19,7 +19,7 @@ try:
     from paths import MISSING_PRODUCTS_LOG as _LOG_PATH
     _DEFAULT_LOG = _LOG_PATH
 except ImportError:
-    _DEFAULT_LOG = 'missing_products.log'
+    _DEFAULT_LOG = str(Path(__file__).resolve().parent.parent / 'runtime' / 'logs' / 'missing_products.log')
 
 try:
     from paths import PRODUCT_NAMES_FILE as _DEFAULT_PRODUCT_NAMES_FILE

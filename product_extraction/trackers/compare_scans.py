@@ -588,6 +588,17 @@ if __name__ == "__main__":
     reports_dir = os.path.normpath(os.path.join(script_dir, "..", "reports"))
     woo_dirs = [
         os.path.normpath(
+            os.path.join(
+                script_dir,
+                "..",
+                "..",
+                "runtime",
+                "cache",
+                "import_builder",
+                "uploads",
+            )
+        ),
+        os.path.normpath(
             os.path.join(script_dir, "..", "..", "import_builder", "uploads")
         ),
         os.path.normpath(os.path.join(script_dir, "..", "import_builder", "uploads")),

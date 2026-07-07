@@ -54,9 +54,16 @@ ASSET_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / 'assets' / 'templa
 LEGACY_TEMPLATE_DIR = Path(__file__).resolve().parent / 'templates'
 TEMPLATE_DIR = ASSET_TEMPLATE_DIR if ASSET_TEMPLATE_DIR.exists() else LEGACY_TEMPLATE_DIR
 
+try:
+    from paths import COLOR_MAPPING_FILE, PRODUCT_NAMES_FILE, IMPORT_BUILDER_UPLOADS_DIR
+except ImportError:
+    COLOR_MAPPING_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'color_mapping.xlsx')
+    PRODUCT_NAMES_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'product_names.xlsx')
+    IMPORT_BUILDER_UPLOADS_DIR = Path(__file__).resolve().parent.parent / 'runtime' / 'cache' / 'import_builder' / 'uploads'
+
 app = Flask(__name__, template_folder=str(TEMPLATE_DIR))
 app.secret_key = os.environ.get('SECRET_KEY', 'woocommerce-generator-secret-key-2024')
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['UPLOAD_FOLDER'] = str(IMPORT_BUILDER_UPLOADS_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -73,12 +80,6 @@ except ImportError:
         return "product-images"
     BASE_IMAGES_URL = "https://luxbaz.com/wp-content/uploads/products/"
     OUTPUT_IMAGE_EXTENSION = '.webp'
-
-try:
-    from paths import COLOR_MAPPING_FILE, PRODUCT_NAMES_FILE
-except ImportError:
-    COLOR_MAPPING_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'color_mapping.xlsx')
-    PRODUCT_NAMES_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'product_names.xlsx')
 
 print("\n" + "="*70)
 print("🌐 WooCommerce Web Panel - Version 12.1")

@@ -14,15 +14,19 @@ except ImportError:
 
 # Repository root used by import_builder utilities.
 ROOT_DIR = Path(__file__).resolve().parent.parent
+RUNTIME_DIR = ROOT_DIR / "runtime"
+CACHE_DIR = RUNTIME_DIR / "cache"
 
 # Shared workspace folders for import_builder.
 DATA_DIR = ROOT_DIR / "data"
-LOGS_DIR = ROOT_DIR / "logs"
+LOGS_DIR = RUNTIME_DIR / "logs"
+IMPORT_BUILDER_UPLOADS_DIR = CACHE_DIR / "import_builder" / "uploads"
 
 # Shared mapping files live in the canonical data layout.
 COLOR_MAPPING_FILE = str(ROOT_DIR / "data" / "mappings" / get_file("color_mapping"))
 PRODUCT_NAMES_FILE = str(ROOT_DIR / "data" / "mappings" / get_file("product_names"))
 MISSING_PRODUCTS_LOG = str(LOGS_DIR / get_file("missing_products_log"))
 
-DATA_DIR.mkdir(exist_ok=True)
-LOGS_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+IMPORT_BUILDER_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)

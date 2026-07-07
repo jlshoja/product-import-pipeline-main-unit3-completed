@@ -6,6 +6,8 @@ Configuration File - Version 9.0
 تنظیمات جامع برای سیستم مدیریت عکس
 """
 
+from pathlib import Path
+
 # ======================
 # تنظیمات پوشه‌ها و URL
 # ======================
@@ -152,7 +154,7 @@ SHOW_PROGRESS = True
 
 # ذخیره لاگ در فایل
 SAVE_LOG_FILE = True
-LOG_FILE_PATH = "image_processing_log.txt"
+LOG_FILE_PATH = str(Path(__file__).resolve().parent.parent / "runtime" / "logs" / "image_processing_log.txt")
 
 # ======================
 # تنظیمات Terminal
