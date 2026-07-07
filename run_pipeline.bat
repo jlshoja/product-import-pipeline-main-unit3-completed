@@ -174,7 +174,7 @@ echo Opening Reports Folder
 echo ============================================================================
 echo.
 if exist "product_extraction\reports\outputs" (
-    start "" "product_extraction\reports\outputs"
+    start "" "runtime\reports"
 ) else (
     echo Reports folder not found.
 )
