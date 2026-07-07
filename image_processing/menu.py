@@ -13,6 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from product_extraction.common.progress_utils import load_json_state
 
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
 # ============================================================
 # Default Settings — edit here
 # ============================================================
@@ -96,11 +98,11 @@ def run(cmd, label, env=None):
 
 def get_download_state():
     """Read previous session state from download_state.json"""
-    state_file = os.path.join(DOWNLOADED_FOLDER, "download_state.json")
-    if not os.path.exists(state_file):
+    canonical_state_file = ROOT_DIR / "runtime" / "state" / "download_state.json"
+    if not canonical_state_file.exists():
         return None
     try:
-        state = load_json_state(state_file, DEFAULT_DOWNLOAD_STATE)
+        state = load_json_state(canonical_state_file, DEFAULT_DOWNLOAD_STATE)
         completed       = len(state.get("completed_pages", []))
         no_image        = len(state.get("no_image_pages", []))
         failed_products = len(state.get("failed_images", {}))
@@ -112,7 +114,7 @@ def get_download_state():
             "no_image":        no_image,
             "failed_products": failed_products,
             "failed_images":   failed_images,
-            "state_file":      state_file,
+            "state_file":      canonical_state_file,
         }
     except Exception:
         return None

@@ -15,7 +15,11 @@ import time
 import re
 import queue
 
-app = Flask(__name__)
+ASSET_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "assets" / "templates" / "product_extraction"
+LEGACY_TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+TEMPLATE_DIR = ASSET_TEMPLATE_DIR if ASSET_TEMPLATE_DIR.exists() else LEGACY_TEMPLATE_DIR
+
+app = Flask(__name__, template_folder=str(TEMPLATE_DIR))
 
 # Thread-safe state
 state_lock = threading.Lock()

@@ -19,12 +19,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # ─── Shared Excel utilities (Unit 3) ───────────────────────────────
 from common.excel_utils import read_excel, excel_writer, write_dataframe
+from common.file_registry import get_file
 from common.file_utils import safe_delete
 from common.progress_utils import load_json_state, save_json_state
 from common.color_utils import collect_unique_normalized_colors
 from common.price_utils import clean_price_text as _clean_price_text
+from common.path_registry import ARCHIVES_DIR, INPUTS_DIR, OUTPUTS_DIR, INTERMEDIATE_DIR, ROOT_DIR, resolve_existing_path
 
-PROGRESS_FILE = 'scraper_progress.json'
+PROGRESS_FILE = str(ROOT_DIR / "runtime" / "state" / get_file('scraper_progress'))
 
 # ✅ Import ColorManager for final standardization
 try:
@@ -1231,8 +1233,8 @@ def main():
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
     timestamp   = datetime.now().strftime('%Y%m%d_%H%M%S')
-    input_file  = os.path.join(ROOT_DIR, 'extracted_products.xlsx')
-    output_file = os.path.join(ROOT_DIR, 'product_details_complete.xlsx')
+    input_file  = str(INTERMEDIATE_DIR / get_file('extracted_products'))
+    output_file = str(OUTPUTS_DIR / get_file('product_details'))
 
     print("=" * 70)
     print("Product Details Extractor - Resume Enabled")
@@ -1341,7 +1343,13 @@ def main():
     color_manager = None
     if HAS_COLOR_MANAGER:
         try:
-            color_manager = ColorManager('color_mapping.xlsx', auto_create=True)
+            color_manager = ColorManager(
+                str(resolve_existing_path(
+                    ROOT_DIR / get_file('color_mapping'),
+                    ARCHIVES_DIR / get_file('color_mapping'),
+                )),
+                auto_create=True,
+            )
             print(f"🎨 ColorManager: {len(color_manager.get_all_colors())} colors loaded")
         except:
             pass

@@ -20,6 +20,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from product_extraction.common.progress_utils import load_json_state, save_json_state
 
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+CANONICAL_STATE_FILE = ROOT_DIR / "runtime" / "state" / "download_state.json"
+
 DEFAULT_DOWNLOAD_STATE = {
     'completed_pages': [],
     'failed_images': {},
@@ -40,7 +43,7 @@ class AdvancedImageDownloader:
 
         Path(self.output_folder).mkdir(parents=True, exist_ok=True)
 
-        self.state_file = os.path.join(self.output_folder, 'download_state.json')
+        self.state_file = str(CANONICAL_STATE_FILE)
         self.state = self.load_state_early()
 
         if self.state.get('session_folder') and os.path.isdir(self.state['session_folder']):
@@ -59,15 +62,22 @@ class AdvancedImageDownloader:
             self.setup_selenium()
 
     def load_state_early(self):
-        if os.path.exists(self.state_file):
+        candidate = Path(self.state_file)
+        if candidate.exists():
             try:
-                return load_json_state(self.state_file, DEFAULT_DOWNLOAD_STATE)
+                return load_json_state(candidate, DEFAULT_DOWNLOAD_STATE)
             except Exception:
                 pass
-        return load_json_state(self.state_file, DEFAULT_DOWNLOAD_STATE)
+        return load_json_state(Path(self.state_file), DEFAULT_DOWNLOAD_STATE)
+
+    def _save_state_to_targets(self):
+        try:
+            save_json_state(Path(self.state_file), self.state)
+        except Exception:
+            pass
 
     def _save_state_raw(self):
-        save_json_state(self.state_file, self.state)
+        self._save_state_to_targets()
 
     def extract_sku(self, product_name):
         import re
@@ -106,7 +116,7 @@ class AdvancedImageDownloader:
 
     def save_state(self):
         try:
-            save_json_state(self.state_file, self.state)
+            self._save_state_to_targets()
         except Exception as e:
             self.logger.error(f"Error saving state: {e}")
 

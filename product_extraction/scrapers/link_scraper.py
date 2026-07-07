@@ -25,14 +25,23 @@ from common.excel_utils import read_excel, write_dataframe
 from common.file_utils import safe_delete
 from common.progress_utils import load_json_state, save_json_state
 
+# ─── مسیر ریشه پروژه (مستقل از cwd) ────────────────────────────────
+# قبلاً این مسیرها نسبت به پوشه‌ی جاری اجرا (cwd) خوانده می‌شدند؛ حالا
+# نسبت به ریشه‌ی پروژه (ROOT_DIR) محاسبه می‌شوند تا صرف‌نظر از اینکه
+# اسکریپت از کجا صدا زده شود (مثلاً از یک .bat بیرون از پوشه پروژه)
+# درست کار کند.
+from common.file_registry import get_file
+from common.path_registry import INTERMEDIATE_DIR, INPUTS_DIR, ROOT_DIR, RUNTIME_LOGS_DIR
+
 # ─────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────
-PROGRESS_FILE   = 'link_scraper_progress.json'    # full run state
-CHECKPOINT_FILE = 'checkpoint.xlsx'  # incremental checkpoint after each URL
-ERROR_LOG_FILE  = 'errors.log'       # all errors
-INPUT_FILE      = 'archive_urls.xlsx'
-OUTPUT_FILE     = 'extracted_products.xlsx'
+PROGRESS_FILE   = str(ROOT_DIR / "runtime" / "state" / get_file('link_scraper_progress'))  # full run state
+CHECKPOINT_FILE = str(ROOT_DIR / "runtime" / "state" / get_file('checkpoint'))  # incremental checkpoint after each URL
+ERROR_LOG_FILE  = str(RUNTIME_LOGS_DIR / get_file('error_log'))  # all errors
+PAGE_SOURCE_FILE = str(ROOT_DIR / "runtime" / "cache" / "page_source.html")  # captured HTML for debugging
+INPUT_FILE      = str(INPUTS_DIR / get_file('archive_urls'))
+OUTPUT_FILE     = str(INTERMEDIATE_DIR / get_file('extracted_products'))
 
 # Run modes
 MODE_FRESH        = '1'  # start fresh
@@ -301,9 +310,9 @@ def extract_products_from_archive(driver, archive_url: str) -> tuple[list, list]
         sys.stdout.flush()
 
         if not products_ok:
-            with open('page_source.html', 'w', encoding='utf-8') as f:
+            with open(PAGE_SOURCE_FILE, 'w', encoding='utf-8') as f:
                 f.write(driver.page_source)
-            print("  → page_source.html saved for debugging")
+            print(f"  → {PAGE_SOURCE_FILE} saved for debugging")
             sys.stdout.flush()
 
         return products_ok, failed_items

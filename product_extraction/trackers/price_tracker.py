@@ -9,6 +9,13 @@ Product Price Tracking and Comparison Tool - Enhanced Edition
 - تولید گزارش HTML زیبا با تب‌ها
 - گزارش‌های جامع‌تر
 - سیستم سوابق قیمت (Price History)
+
+تغییر:
+- مسیر پوشه reports و فایل ورودی extracted_products.xlsx دیگر به
+  cwd (پوشه اجرا) وابسته نیستند و نسبت به ریشه پروژه (ROOT_DIR)
+  محاسبه می‌شوند. قبلاً اگر این اسکریپت از بیرون پوشه پروژه (مثلاً
+  از یک .bat در پوشه بالاتر) اجرا می‌شد، یک پوشه reports جدید و
+  اشتباه در محل اشتباه ساخته می‌شد بدون اینکه خطایی نشان داده شود.
 """
 
 # Fix Windows console encoding
@@ -42,13 +49,18 @@ from common.excel_utils import (
 )
 from common.date_utils import get_persian_date as _get_persian_date
 from common.date_utils import gregorian_to_jalali as _gregorian_to_jalali
+from common.file_registry import get_file
 from common.file_utils import ensure_directory
 from common.file_utils import find_latest_dated
+from common.path_registry import INTERMEDIATE_DIR, RUNTIME_REPORTS_DIR
 from common.price_utils import extract_price_from_text as _extract_price_from_text
 from common.price_utils import format_number as _format_number
 from common.price_utils import parse_numeric_price as _parse_numeric_price
 from common.text_utils import extract_product_code as _extract_product_code
 from common.text_utils import extract_product_name as _extract_product_name
+
+# ─── مسیر ریشه پروژه (مستقل از cwd) ────────────────────────────────
+from common.path_registry import ROOT_DIR
 
 # Import Price History Manager
 try:
@@ -63,21 +75,21 @@ except:
 
 def create_reports_folder():
     """
-    ایجاد فولدر reports اگر وجود ندارد
+    ایجاد فولدر reports اگر وجود ندارد (نسبت به ریشه پروژه، نه cwd)
     """
-    return ensure_directory('reports')
+    return ensure_directory(RUNTIME_REPORTS_DIR)
 
 
 def find_latest_tracking_file():
     """
-    پیدا کردن آخرین فایل پیگیری
+    پیدا کردن آخرین فایل پیگیری (نسبت به ریشه پروژه، نه cwd)
     """
-    latest_file = Path('reports') / 'product_tracking_LATEST.xlsx'
+    latest_file = RUNTIME_REPORTS_DIR / get_file('product_tracking_latest')
     if latest_file.exists():
         return latest_file
 
     return find_latest_dated(
-        'reports',
+        RUNTIME_REPORTS_DIR,
         'product_tracking_????-??-??.xlsx',
         r'product_tracking_(\d{4}-\d{2}-\d{2})\.xlsx$',
     )
@@ -920,7 +932,7 @@ def save_to_excel(current_df, new_products, price_changes, removed_products, pre
     date_for_filename = persian_date.replace('/', '-')
     
     # File names in reports folder
-    latest_file = reports_dir / 'product_tracking_LATEST.xlsx'
+    latest_file = reports_dir / get_file('product_tracking_latest')
     archive_file = reports_dir / f'product_tracking_{date_for_filename}.xlsx'
     
     print(f"\n{'='*80}")
@@ -1005,11 +1017,12 @@ def main():
     ╚════════════════════════════════════════════════════════╝
     """)
     
-    # ✨ ایجاد فولدر reports
+    # ✨ ایجاد فولدر reports (نسبت به ریشه پروژه، نه cwd)
     reports_dir = create_reports_folder()
     print(f"📁 Reports folder: {reports_dir.absolute()}\n")
     
-    input_file = 'extracted_products.xlsx'
+    # ورودی نسبت به ریشه پروژه (نه cwd)
+    input_file = INTERMEDIATE_DIR / get_file('extracted_products')
     
     # Check input file exists
     if not Path(input_file).exists():

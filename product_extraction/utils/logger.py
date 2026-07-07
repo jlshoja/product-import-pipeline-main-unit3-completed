@@ -12,13 +12,15 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    from common.path_registry import LOGS_DIR
+    from common.file_registry import get_file, has_file
+    from common.path_registry import LOGS_DIR, RUNTIME_LOGS_DIR
     from config import get_config
 
 except ImportError:
-    from common.path_registry import LOGS_DIR
+    from common.file_registry import get_file, has_file
+    from common.path_registry import LOGS_DIR, RUNTIME_LOGS_DIR
 
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
+RUNTIME_LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ===========================
 # ‌  Console Output
@@ -123,29 +125,40 @@ class LoggerSetup:
         # File Handler
         if file_output:
             if log_file is None:
-                log_file = LOGS_DIR / f"{name}.log"
+                registry_key = f"{name}_log"
+                if has_file(registry_key):
+                    log_file = RUNTIME_LOGS_DIR / get_file(registry_key)
+                else:
+                    log_file = RUNTIME_LOGS_DIR / f"{name}.log"
             else:
                 log_file = Path(log_file)
 
-            # Rotating File Handler (  )
-            file_handler = RotatingFileHandler(
-                log_file,
-                maxBytes=10 * 1024 * 1024,  # 10 MB
-                backupCount=5,
-                encoding="utf-8",
-            )
-            file_handler.setLevel(getattr(logging, level.upper()))
-            file_handler.setFormatter(file_format)
-            logger.addHandler(file_handler)
+            # Rotating File Handler (best effort)
+            try:
+                file_handler = RotatingFileHandler(
+                    log_file,
+                    maxBytes=10 * 1024 * 1024,  # 10 MB
+                    backupCount=5,
+                    encoding="utf-8",
+                )
+                file_handler.setLevel(getattr(logging, level.upper()))
+                file_handler.setFormatter(file_format)
+                logger.addHandler(file_handler)
+            except OSError:
+                # Keep the logger usable even if the filesystem blocks log files.
+                file_output = False
 
         # Error Handler
-        error_log = LOGS_DIR / "error.log"
-        error_handler = RotatingFileHandler(
-            error_log, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-        )
-        error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(file_format)
-        logger.addHandler(error_handler)
+        error_log = RUNTIME_LOGS_DIR / get_file("error_log")
+        try:
+            error_handler = RotatingFileHandler(
+                error_log, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+            )
+            error_handler.setLevel(logging.ERROR)
+            error_handler.setFormatter(file_format)
+            logger.addHandler(error_handler)
+        except OSError:
+            pass
 
         #   cache
         cls._loggers[name] = logger
@@ -156,27 +169,27 @@ class LoggerSetup:
     def get_scraper_logger(cls) -> logging.Logger:
         """Logger  Scraper"""
         return cls.get_logger(
-            name="scraper", log_file=LOGS_DIR / "scraper.log", level="INFO"
+            name="scraper", log_file=RUNTIME_LOGS_DIR / get_file("scraper_log"), level="INFO"
         )
 
     @classmethod
     def get_tracker_logger(cls) -> logging.Logger:
         """Logger  Tracker"""
         return cls.get_logger(
-            name="tracker", log_file=LOGS_DIR / "tracker.log", level="INFO"
+            name="tracker", log_file=RUNTIME_LOGS_DIR / get_file("tracker_log"), level="INFO"
         )
 
     @classmethod
     def get_color_manager_logger(cls) -> logging.Logger:
         """Logger  Color Manager"""
         return cls.get_logger(
-            name="color_manager", log_file=LOGS_DIR / "color_manager.log", level="INFO"
+            name="color_manager", log_file=RUNTIME_LOGS_DIR / get_file("color_manager_log"), level="INFO"
         )
 
     @classmethod
     def get_main_logger(cls) -> logging.Logger:
         """Logger"""
-        return cls.get_logger(name="main", log_file=LOGS_DIR / "main.log", level="INFO")
+        return cls.get_logger(name="main", log_file=RUNTIME_LOGS_DIR / get_file("main_log"), level="INFO")
 
 
 # ===========================
@@ -306,7 +319,7 @@ def clear_old_logs(days: int = 30):
     cutoff_date = datetime.now() - timedelta(days=days)
 
     deleted_count = 0
-    for log_file in LOGS_DIR.glob("*.log*"):
+    for log_file in RUNTIME_LOGS_DIR.glob("*.log*"):
         if log_file.stat().st_mtime < cutoff_date.timestamp():
             log_file.unlink()
             deleted_count += 1
@@ -355,4 +368,4 @@ if __name__ == "__main__":
     log_system_info(logger)
 
     print("\n[OK] Logging system test completed!")
-    print(f"Log files are in: {LOGS_DIR}")
+    print(f"Log files are in: {RUNTIME_LOGS_DIR}")

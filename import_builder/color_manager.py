@@ -12,6 +12,11 @@ import pandas as pd
 import os
 import re
 
+try:
+    from paths import COLOR_MAPPING_FILE as DEFAULT_COLOR_MAPPING_PATH
+except ImportError:
+    DEFAULT_COLOR_MAPPING_PATH = 'color_mapping.xlsx'
+
 class ColorManager:
     """مدیر رنگ‌ها با قابلیت ترجمه فارسی به انگلیسی"""
     
@@ -29,7 +34,7 @@ class ColorManager:
         '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
     }
     
-    def __init__(self, excel_path='color_mapping.xlsx', auto_create=False):
+    def __init__(self, excel_path=DEFAULT_COLOR_MAPPING_PATH, auto_create=False):
         """
         Initialize Color Manager
         

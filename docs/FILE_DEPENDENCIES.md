@@ -82,15 +82,15 @@ These dependencies increase migration risk because modules depend on specific fi
 
 | product-images    | woocommerce\_generator\_v12.py, image processing workflow          | High   |
 
-| reports           | spec\_scraper.py, dashboard\_generator.py, compare\_scans.py        | Medium |
+| runtime/reports   | spec\_scraper.py, dashboard\_generator.py, compare\_scans.py        | Medium |
 
-| reports/templates | dashboard subsystem                                              | Medium |
+| assets/templates  | dashboard subsystem                                              | Medium |
 
-| reports/outputs   | dashboard subsystem                                              | Medium |
+| runtime/reports   | dashboard subsystem                                              | Medium |
 
-| logs              | settings.py, import\_builder                                      | Medium |
+| runtime/logs      | settings.py, import\_builder                                      | Medium |
 
-| data              | settings.py, paths.py                                            | Medium |
+| data/             | settings.py, paths.py                                            | Medium |
 
 
 
@@ -114,7 +114,7 @@ The following relative paths assume a fixed repository structure:
 
 ../uploads
 
-../reports
+../runtime/reports
 
 ```
 

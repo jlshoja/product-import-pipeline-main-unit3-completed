@@ -2,7 +2,7 @@
 
 product_extraction
     ↓
-data_standardization
+data/reference
     ↓
 image_processing
     ↓

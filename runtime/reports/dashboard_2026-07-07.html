@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 داشبورد پیگیری محصولات</title>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .header .date-info {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            opacity: 0.85;
+        }
+        
+        /* Stats Cards */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-right: 5px solid;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card.total {
+            border-right-color: #667eea;
+        }
+        
+        .stat-card.new {
+            border-right-color: #28a745;
+        }
+        
+        .stat-card.changed {
+            border-right-color: #ffc107;
+        }
+        
+        .stat-card.removed {
+            border-right-color: #dc3545;
+        }
+        
+        .stat-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+        
+        .stat-card.total .icon { color: #667eea; }
+        .stat-card.new .icon { color: #28a745; }
+        .stat-card.changed .icon { color: #ffc107; }
+        .stat-card.removed .icon { color: #dc3545; }
+        
+        .stat-card .label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        /* Charts Section */
+        .charts-section {
+            padding: 30px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .chart-card h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            padding: 0 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .tab.active {
+            color: #667eea;
+            background: white;
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            right: 0;
+            left: 0;
+            height: 3px;
+            background: #667eea;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: right;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .badge.new { background: #d4edda; color: #155724; }
+        .badge.changed { background: #fff3cd; color: #856404; }
+        .badge.unchanged { background: #e2e3e5; color: #383d41; }
+        .badge.removed { background: #f8d7da; color: #721c24; }
+        
+        .price {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .price-change {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .price-up {
+            color: #dc3545;
+        }
+        
+        .price-down {
+            color: #28a745;
+        }
+        
+        /* Links */
+        a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 25px;
+            background: #f8f9fa;
+            color: #666;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        /* Search Box */
+        .search-box {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px 45px 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .search-box i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+            
+            .tab {
+                white-space: nowrap;
+            }
+        }
+        
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> داشبورد پیگیری محصولات</h1>
+            <div class="subtitle">سیستم هوشمند تحلیل و مقایسه قیمت‌ها</div>
+            <div class="date-info">
+                <i class="far fa-calendar"></i> تاریخ بروزرسانی: <span id="updateDate">1405/04/16</span>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="stats-container">
+            <div class="stat-card total">
+                <div class="icon"><i class="fas fa-box"></i></div>
+                <div class="label">کل محصولات</div>
+                <div class="value" id="totalProducts">1</div>
+            </div>
+            
+            <div class="stat-card new">
+                <div class="icon"><i class="fas fa-plus-circle"></i></div>
+                <div class="label">محصولات جدید</div>
+                <div class="value" id="newProducts">0</div>
+            </div>
+            
+            <div class="stat-card changed">
+                <div class="icon"><i class="fas fa-exchange-alt"></i></div>
+                <div class="label">تغییر قیمت</div>
+                <div class="value" id="changedProducts">0</div>
+            </div>
+            
+            <div class="stat-card removed">
+                <div class="icon"><i class="fas fa-trash-alt"></i></div>
+                <div class="label">محصولات حذف شده</div>
+                <div class="value" id="removedProducts">0</div>
+            </div>
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="charts-grid">
+                <!-- Product Status Chart -->
+                <div class="chart-card">
+                    <h3><i class="fas fa-pie-chart"></i> وضعیت محصولات</h3>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Price Changes Chart -->
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-bar"></i> تغییرات قیمت</h3>
+                    <div class="chart-container">
+                        <canvas id="priceChangesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Price Trend Chart -->
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-line"></i> روند قیمت‌ها در ۷ روز گذشته</h3>
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="priceTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="openTab('all')">
+                <i class="fas fa-list"></i> همه محصولات
+            </button>
+            <button class="tab" onclick="openTab('new')">
+                <i class="fas fa-plus-circle"></i> جدید (0)
+            </button>
+            <button class="tab" onclick="openTab('changed')">
+                <i class="fas fa-exchange-alt"></i> تغییر قیمت (0)
+            </button>
+            <button class="tab" onclick="openTab('removed')">
+                <i class="fas fa-trash-alt"></i> حذف شده (0)
+            </button>
+        </div>
+        
+        <!-- Tab Contents -->
+        <div id="all" class="tab-content active">
+            <div class="search-box">
+                <input type="text" id="searchAll" placeholder="جستجوی محصول..." onkeyup="searchTable('allProductsTable', 'searchAll')">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="table-container">
+                <table id="allProductsTable">
+                    <thead>
+                        <tr>
+                            <th>ردیف</th>
+                            <th>نام محصول</th>
+                            <th>کد</th>
+                            <th>قیمت</th>
+                            <th>وضعیت</th>
+                            <th>لینک</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                <tr>
+                    <td>1</td>
+                    <td></td>
+                    <td></td>
+                    <td class="price">N/A</td>
+                    <td><span class="badge unchanged">نامشخص</span></td>
+                    <td><a href="#" target="_blank"><i class="fas fa-external-link-alt"></i></a></td>
+                </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="new" class="tab-content">
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-plus-circle"></i> محصولات جدید</h2>
+            <!--
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ردیف</th>
+                            <th>نام محصول</th>
+                            <th>کد</th>
+                            <th>قیمت</th>
+                            <th>لینک</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="5" style="text-align:center;">محصول جدیدی یافت نشد</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            -->
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>محصول جدیدی یافت نشد</p>
+            </div>
+            
+        </div>
+        
+        <div id="changed" class="tab-content">
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-exchange-alt"></i> تغییرات قیمت</h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ردیف</th>
+                            <th>نام محصول</th>
+                            <th>قیمت قبلی</th>
+                            <th>قیمت جدید</th>
+                            <th>تغییر</th>
+                            <th>درصد</th>
+                            <th>لینک</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="7" style="text-align:center;">تغییر قیمتی یافت نشد</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            -->
+            <div class="empty-state">
+                <i class="fas fa-equals"></i>
+                <p>تغییر قیمتی یافت نشد</p>
+            </div>
+            
+        </div>
+        
+        <div id="removed" class="tab-content">
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-trash-alt"></i> محصولات حذف شده</h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ردیف</th>
+                            <th>نام محصول</th>
+                            <th>کد</th>
+                            <th>قیمت آخرین</th>
+                            <th>تاریخ حذف</th>
+                            <th>لینک</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="6" style="text-align:center;">محصول حذف شده‌ای یافت نشد</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            -->
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>محصول حذف شده‌ای یافت نشد</p>
+            </div>
+            
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><i class="fas fa-code"></i> گزارش تولید شده توسط سیستم پیگیری محصولات</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                Powered by <strong>Product Tracker v2.0</strong>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Tab Switching
+        function openTab(tabName) {
+            // Hide all tabs
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            // Remove active class from all buttons
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+        
+        // Search Function
+        function searchTable(tableId, inputId) {
+            const input = document.getElementById(inputId);
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById(tableId);
+            const tr = table.getElementsByTagName('tr');
+            
+            for (let i = 1; i < tr.length; i++) {
+                let found = false;
+                const td = tr[i].getElementsByTagName('td');
+                
+                for (let j = 0; j < td.length; j++) {
+                    if (td[j]) {
+                        const txtValue = td[j].textContent || td[j].innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                
+                tr[i].style.display = found ? '' : 'none';
+            }
+        }
+        
+        // Chart Data (این داده‌ها باید از سرور بیاید)
+        const chartData = {"new": 0, "changed": 0, "unchanged": 1, "removed": 0, "priceIncreased": 0, "priceDecreased": 0, "priceUnchanged": 1, "dates": ["2026/07/01", "2026/07/02", "2026/07/03", "2026/07/04", "2026/07/05", "2026/07/06", "2026/07/07"], "avgPrices": [0, 0, 0, 0, 0, 0, 0]};
+        
+        // Product Status Pie Chart
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['جدید', 'تغییر قیمت', 'بدون تغییر', 'حذف شده'],
+                datasets: [{
+                    data: [
+                        chartData.new,
+                        chartData.changed,
+                        chartData.unchanged,
+                        chartData.removed
+                    ],
+                    backgroundColor: [
+                        '#28a745',
+                        '#ffc107',
+                        '#6c757d',
+                        '#dc3545'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: {
+                                size: 12,
+                                family: 'Segoe UI'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Price Changes Bar Chart
+        const priceCtx = document.getElementById('priceChangesChart').getContext('2d');
+        new Chart(priceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['افزایش قیمت', 'کاهش قیمت', 'بدون تغییر'],
+                datasets: [{
+                    label: 'تعداد محصولات',
+                    data: [
+                        chartData.priceIncreased,
+                        chartData.priceDecreased,
+                        chartData.priceUnchanged
+                    ],
+                    backgroundColor: [
+                        'rgba(220, 53, 69, 0.7)',
+                        'rgba(40, 167, 69, 0.7)',
+                        'rgba(108, 117, 125, 0.7)'
+                    ],
+                    borderColor: [
+                        '#dc3545',
+                        '#28a745',
+                        '#6c757d'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Price Trend Line Chart
+        const trendCtx = document.getElementById('priceTrendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.dates || [],
+                datasets: [{
+                    label: 'میانگین قیمت (تومان)',
+                    data: chartData.avgPrices || [],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#667eea',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'میانگین: ' + context.parsed.y.toLocaleString('fa-IR') + ' تومان';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('fa-IR');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Auto-refresh every 5 minutes
+        setTimeout(function() {
+            location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>

@@ -58,7 +58,7 @@ python web_panel_v12.py
 
 ## فایل‌های داده
 
-### `data/color_mapping.xlsx`
+### `data/mappings/color_mapping.xlsx`
 جدول ترجمه رنگ‌ها. ستون‌ها: `Persian` | `English`
 
 مثال:
@@ -68,7 +68,7 @@ python web_panel_v12.py
 | سفید | white |
 | سرمه‌ای | navy-blue |
 
-### `data/product_names.xlsx`
+### `data/mappings/product_names.xlsx`
 جدول ترجمه نام محصولات. شیت: `Products`، ستون‌ها: `Persian` | `English`
 
 مثال:

@@ -23,8 +23,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 try:
     from paths import COLOR_MAPPING_FILE, PRODUCT_NAMES_FILE
 except ImportError:
-    COLOR_MAPPING_FILE = 'color_mapping.xlsx'
-    PRODUCT_NAMES_FILE = 'product_names.xlsx'
+    COLOR_MAPPING_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'color_mapping.xlsx')
+    PRODUCT_NAMES_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'product_names.xlsx')
 
 # Import Image Naming v11 (Color Matching from Filename)
 try:

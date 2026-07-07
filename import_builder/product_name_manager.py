@@ -21,6 +21,11 @@ try:
 except ImportError:
     _DEFAULT_LOG = 'missing_products.log'
 
+try:
+    from paths import PRODUCT_NAMES_FILE as _DEFAULT_PRODUCT_NAMES_FILE
+except ImportError:
+    _DEFAULT_PRODUCT_NAMES_FILE = 'product_names.xlsx'
+
 # ===========================
 # ترجمه پیش‌فرض نام محصولات
 # ===========================
@@ -111,7 +116,7 @@ def transliterate_persian(text):
 class ProductNameManager:
     """مدیر نام محصولات با قابلیت خواندن از Excel"""
     
-    def __init__(self, excel_path='product_names.xlsx', auto_create=True):
+    def __init__(self, excel_path=_DEFAULT_PRODUCT_NAMES_FILE, auto_create=True):
         """
         مقداردهی اولیه
         

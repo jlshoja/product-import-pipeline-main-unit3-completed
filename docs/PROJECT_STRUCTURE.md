@@ -17,7 +17,8 @@ product-import-pipeline/
 │   └── LEGACY_PROJECT_WORKFLOW.md
 │
 ├── product_extraction/
-├── data_standardization/
+├── data/
+│   └── reference/
 ├── image_processing/
 ├── import_builder/
 │

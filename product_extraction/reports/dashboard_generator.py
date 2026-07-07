@@ -28,9 +28,12 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
+    from common.file_registry import get_file
     from common.path_registry import (
+        ASSET_TEMPLATES_DIR,
         REPORTS_DIR,
-        TEMPLATES_DIR,
+        RUNTIME_REPORTS_DIR,
+        resolve_existing_path,
     )
     from common.date_utils import get_persian_date as shared_get_persian_date
     from config import get_config
@@ -41,9 +44,12 @@ try:
 except ImportError:
     import logging
 
+    from common.file_registry import get_file
     from common.path_registry import (
+        ASSET_TEMPLATES_DIR,
         REPORTS_DIR,
-        TEMPLATES_DIR,
+        RUNTIME_REPORTS_DIR,
+        resolve_existing_path,
     )
     from common.date_utils import get_persian_date as shared_get_persian_date
 
@@ -62,7 +68,7 @@ class DashboardGenerator:
             template_path: مسیر template HTML
         """
         self.template_path = template_path or (
-            TEMPLATES_DIR / "dashboard_template.html"
+            ASSET_TEMPLATES_DIR / get_file("dashboard_template")
         )
         self.logger = logger
 
@@ -138,7 +144,7 @@ class DashboardGenerator:
         # ذخیره فایل
         if output_path is None:
             date_str = datetime.now().strftime("%Y-%m-%d")
-            output_path = REPORTS_DIR / f"dashboard_{date_str}.html"
+            output_path = RUNTIME_REPORTS_DIR / f"dashboard_{date_str}.html"
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -475,3 +481,4 @@ def test_dashboard_generator():
 
 if __name__ == "__main__":
     test_dashboard_generator()
+

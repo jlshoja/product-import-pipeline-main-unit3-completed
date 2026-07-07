@@ -12,6 +12,13 @@ from pathlib import Path
 from datetime import datetime
 
 try:
+    from common.file_registry import get_file
+    from common.path_registry import ARCHIVES_DIR, ROOT_DIR, resolve_existing_path
+except ImportError:
+    from product_extraction.common.file_registry import get_file
+    from product_extraction.common.path_registry import ARCHIVES_DIR, ROOT_DIR, resolve_existing_path
+
+try:
     from common.color_utils import (
         normalize_persian_color_text,
         simple_color_slug,
@@ -64,7 +71,7 @@ DEFAULT_COLOR_TRANSLATION = {
 class ColorManager:
     """مدیر رنگ‌ها با قابلیت خواندن از Excel"""
     
-    def __init__(self, excel_path='color_mapping.xlsx', auto_create=True):
+    def __init__(self, excel_path=None, auto_create=True):
         """
         مقداردهی اولیه
         
@@ -72,7 +79,10 @@ class ColorManager:
             excel_path: مسیر فایل Excel رنگ‌ها
             auto_create: ساخت خودکار فایل در صورت عدم وجود
         """
-        self.excel_path = excel_path
+        self.excel_path = excel_path or str(resolve_existing_path(
+            ROOT_DIR / 'data' / 'mappings' / get_file('color_mapping'),
+            ARCHIVES_DIR / get_file('color_mapping'),
+        ))
         self.auto_create = auto_create
         self.color_dict = {}
         self.missing_colors = []
@@ -322,7 +332,7 @@ class ColorManager:
 # توابع کمکی
 # ===========================
 
-def get_color_manager(excel_path='color_mapping.xlsx'):
+def get_color_manager(excel_path=None):
     """
     دریافت instance از ColorManager (Singleton pattern)
     """

@@ -9,9 +9,12 @@ from pathlib import Path
 import argparse
 
 #    
-project_root = Path(__file__).parent
+from common.path_registry import ROOT_DIR
+
+project_root = ROOT_DIR / "product_extraction"
 sys.path.insert(0, str(project_root))
 
+from common.file_registry import get_file
 from config import get_config
 from utils.logger import LoggerSetup, log_execution_time
 
@@ -52,7 +55,7 @@ class ProductScraperApp:
         self.config.print_summary()
     
     @log_execution_time()
-    def run_link_scraper(self, input_file='archive_urls.xlsx'):
+    def run_link_scraper(self, input_file=get_file('archive_urls')):
         """Run Link Scraper"""
         self.logger.info("="*70)
         self.logger.info("[1]  Running Link Scraper")
@@ -72,7 +75,7 @@ class ProductScraperApp:
             return False
     
     @log_execution_time()
-    def run_spec_scraper(self, input_file='extracted_products.xlsx'):
+    def run_spec_scraper(self, input_file=get_file('extracted_products')):
         """Run Spec Scraper"""
         self.logger.info("="*70)
         self.logger.info("[2]  Running Spec Scraper")
@@ -92,7 +95,7 @@ class ProductScraperApp:
             return False
     
     @log_execution_time()
-    def run_price_tracker(self, input_file='extracted_products.xlsx'):
+    def run_price_tracker(self, input_file=get_file('extracted_products')):
         """Run Price Tracker"""
         self.logger.info("="*70)
         self.logger.info("[3]  Running Price Tracker")
@@ -279,11 +282,11 @@ def main():
     
     # Execute command
     if args.command == 'scrape-links':
-        success = app.run_link_scraper(args.input or 'archive_urls.xlsx')
+        success = app.run_link_scraper(args.input or get_file('archive_urls'))
     elif args.command == 'scrape-specs':
-        success = app.run_spec_scraper(args.input or 'extracted_products.xlsx')
+        success = app.run_spec_scraper(args.input or get_file('extracted_products'))
     elif args.command == 'track':
-        success = app.run_price_tracker(args.input or 'extracted_products.xlsx')
+        success = app.run_price_tracker(args.input or get_file('extracted_products'))
     elif args.command == 'dashboard':
         success = app.generate_dashboard()
     elif args.command == 'test':
