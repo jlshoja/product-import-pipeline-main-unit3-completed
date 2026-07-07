@@ -30,11 +30,16 @@ from common.color_utils import (
 
 # ─── مسیر ریشه پروژه (مستقل از cwd) ────────────────────────────────
 try:
-    from common.path_registry import ROOT_DIR
+    from common.file_registry import get_file
+    from common.path_registry import LEGACY_APP_DIR, ROOT_DIR, resolve_existing_path
 except ImportError:
-    from product_extraction.common.path_registry import ROOT_DIR
+    from product_extraction.common.file_registry import get_file
+    from product_extraction.common.path_registry import LEGACY_APP_DIR, ROOT_DIR, resolve_existing_path
 
-DEFAULT_COLOR_MAPPING_PATH = str(ROOT_DIR / 'color_mapping.xlsx')
+DEFAULT_COLOR_MAPPING_PATH = str(resolve_existing_path(
+    ROOT_DIR / 'data' / 'mappings' / get_file('color_mapping'),
+    LEGACY_APP_DIR / get_file('color_mapping'),
+))
 
 # ===========================
 # رنگ‌های پیش‌فرض (Fallback)

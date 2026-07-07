@@ -70,20 +70,26 @@ except ImportError:
     BASE_IMAGES_URL = "https://luxbaz.com/wp-content/uploads/products/"
     OUTPUT_IMAGE_EXTENSION = '.webp'
 
+try:
+    from paths import COLOR_MAPPING_FILE, PRODUCT_NAMES_FILE
+except ImportError:
+    COLOR_MAPPING_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'color_mapping.xlsx')
+    PRODUCT_NAMES_FILE = str(Path(__file__).resolve().parent.parent / 'data' / 'mappings' / 'product_names.xlsx')
+
 print("\n" + "="*70)
 print("🌐 WooCommerce Web Panel - Version 12.1")
 print("="*70)
 
 # Initialize managers
 if HAS_COLOR_MANAGER:
-    color_manager = ColorManager('color_mapping.xlsx', auto_create=True)
+    color_manager = ColorManager(COLOR_MAPPING_FILE, auto_create=True)
     print(f"🎨 Color Manager: ✅ Loaded")
 else:
     color_manager = None
     print(f"🎨 Color Manager: ⚠️ Not available")
 
 if HAS_PRODUCT_MANAGER:
-    product_name_manager = ProductNameManager('product_names.xlsx', auto_create=True)
+    product_name_manager = ProductNameManager(PRODUCT_NAMES_FILE, auto_create=True)
     print(f"📦 Product Name Manager: ✅ Loaded")
 else:
     product_name_manager = None

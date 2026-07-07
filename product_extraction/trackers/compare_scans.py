@@ -26,6 +26,7 @@ from common.excel_utils import (
     auto_width,
     set_fill,
 )
+from common.file_registry import get_file
 from common.file_utils import find_first_glob_match, find_latest_dated
 from common.price_utils import select_effective_price as _select_effective_price
 from common.color_utils import split_color_values as _split_color_values
@@ -74,7 +75,7 @@ def find_latest_scan(folder):
 
 def find_links_file(folder):
     """پیدا کردن فایل extracted_products*.xlsx (لینک محصولات) در یک پوشه."""
-    match = find_first_glob_match(folder, "extracted_products*.xlsx")
+    match = find_first_glob_match(folder, f"{Path(get_file('extracted_products')).stem}*.xlsx")
     return str(match) if match else None
 
 

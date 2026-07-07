@@ -13,19 +13,41 @@ from dotenv import load_dotenv
 #  Environment Variables
 load_dotenv()
 
+try:
+    from common.file_registry import get_file
+    from common.path_registry import (
+        DATA_DIR,
+        LEGACY_APP_DIR,
+        LOGS_DIR,
+        REPORTS_DIR,
+        ROOT_DIR,
+        TEMPLATES_DIR,
+        resolve_existing_path,
+    )
+except ImportError:
+    from product_extraction.common.file_registry import get_file
+    from product_extraction.common.path_registry import (
+        DATA_DIR,
+        LEGACY_APP_DIR,
+        LOGS_DIR,
+        REPORTS_DIR,
+        ROOT_DIR,
+        TEMPLATES_DIR,
+        resolve_existing_path,
+    )
+
 # ===========================
 #   
 # ===========================
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / 'data'
-REPORTS_DIR = BASE_DIR / 'reports' / 'outputs'
-TEMPLATES_DIR = BASE_DIR / 'reports' / 'templates'
-LOGS_DIR = BASE_DIR / 'logs'
+BASE_DIR = ROOT_DIR
 
 #  ‌    
 for directory in [DATA_DIR, REPORTS_DIR, TEMPLATES_DIR, LOGS_DIR]:
-    directory.mkdir(parents=True, exist_ok=True)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 
 # ===========================
@@ -52,10 +74,13 @@ class ScraperConfig:
     retry_delay: float = 5.0
     
     # File Paths
-    archive_urls_file: str = 'archive_urls.xlsx'
-    extracted_products_file: str = 'extracted_products.xlsx'
-    product_details_file: str = 'product_details_complete.xlsx'
-    progress_file: Path = DATA_DIR / 'scraper_progress.json'
+    archive_urls_file: str = get_file('archive_urls')
+    extracted_products_file: str = get_file('extracted_products')
+    product_details_file: str = get_file('product_details')
+    progress_file: Path = resolve_existing_path(
+        DATA_DIR / get_file('link_scraper_progress'),
+        LEGACY_APP_DIR / get_file('link_scraper_progress'),
+    )
     
     # Chrome Options
     chrome_arguments: List[str] = field(default_factory=lambda: [
@@ -92,7 +117,10 @@ class ScraperConfig:
 class ColorConfig:
     """  ‌"""
     
-    color_mapping_file: Path = DATA_DIR / 'color_mapping.xlsx'
+    color_mapping_file: Path = resolve_existing_path(
+        DATA_DIR / get_file('color_mapping'),
+        LEGACY_APP_DIR / get_file('color_mapping'),
+    )
     auto_create_mapping: bool = True
     
     # ‌ 
@@ -112,11 +140,14 @@ class ColorConfig:
 class TrackerConfig:
     """  """
     
-    input_file: str = 'extracted_products.xlsx'
-    output_latest: Path = REPORTS_DIR / 'product_tracking_LATEST.xlsx'
+    input_file: str = get_file('extracted_products')
+    output_latest: Path = REPORTS_DIR / get_file('product_tracking_latest')
     
     # HTML Report Settings
-    html_template: Path = TEMPLATES_DIR / 'report_template.html'
+    html_template: Path = resolve_existing_path(
+        TEMPLATES_DIR / get_file('dashboard_template'),
+        LEGACY_APP_DIR / 'reports' / 'templates' / get_file('dashboard_template'),
+    )
     generate_html: bool = True
     
     # Excel Report Settings
@@ -149,10 +180,10 @@ class LoggingConfig:
     log_level: str = os.getenv('LOG_LEVEL', 'INFO')
     
     # Log Files
-    main_log: Path = LOGS_DIR / 'main.log'
-    scraper_log: Path = LOGS_DIR / 'scraper.log'
-    tracker_log: Path = LOGS_DIR / 'tracker.log'
-    error_log: Path = LOGS_DIR / 'error.log'
+    main_log: Path = LOGS_DIR / get_file('main_log')
+    scraper_log: Path = LOGS_DIR / get_file('scraper_log')
+    tracker_log: Path = LOGS_DIR / get_file('tracker_log')
+    error_log: Path = LOGS_DIR / get_file('error_log')
     
     # Log Format
     log_format: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -222,7 +253,10 @@ class AppConfig:
             self.tracker.output_latest.parent,
         ]
         for directory in required_dirs:
-            directory.mkdir(parents=True, exist_ok=True)
+            try:
+                directory.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
     
     def _create_required_files(self):
         """ ‌ """

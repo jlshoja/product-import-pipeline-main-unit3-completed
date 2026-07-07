@@ -30,16 +30,29 @@ from common.progress_utils import load_json_state, save_json_state
 # نسبت به ریشه‌ی پروژه (ROOT_DIR) محاسبه می‌شوند تا صرف‌نظر از اینکه
 # اسکریپت از کجا صدا زده شود (مثلاً از یک .bat بیرون از پوشه پروژه)
 # درست کار کند.
-from common.path_registry import ROOT_DIR
+from common.file_registry import get_file
+from common.path_registry import LEGACY_APP_DIR, ROOT_DIR, resolve_existing_path
 
 # ─────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────
-PROGRESS_FILE   = str(ROOT_DIR / 'link_scraper_progress.json')   # full run state
-CHECKPOINT_FILE = str(ROOT_DIR / 'checkpoint.xlsx')              # incremental checkpoint after each URL
-ERROR_LOG_FILE  = str(ROOT_DIR / 'errors.log')                   # all errors
-INPUT_FILE      = str(ROOT_DIR / 'archive_urls.xlsx')
-OUTPUT_FILE     = str(ROOT_DIR / 'extracted_products.xlsx')
+PROGRESS_FILE   = str(resolve_existing_path(
+    ROOT_DIR / "runtime" / "state" / get_file('link_scraper_progress'),
+    LEGACY_APP_DIR / get_file('link_scraper_progress'),
+))  # full run state
+CHECKPOINT_FILE = str(resolve_existing_path(
+    ROOT_DIR / "runtime" / "state" / get_file('checkpoint'),
+    LEGACY_APP_DIR / get_file('checkpoint'),
+))  # incremental checkpoint after each URL
+ERROR_LOG_FILE  = str(resolve_existing_path(
+    ROOT_DIR / "logs" / get_file('error_log'),
+    LEGACY_APP_DIR / 'logs' / get_file('error_log'),
+))  # all errors
+INPUT_FILE      = str(resolve_existing_path(
+    ROOT_DIR / get_file('archive_urls'),
+    LEGACY_APP_DIR / get_file('archive_urls'),
+))
+OUTPUT_FILE     = str(ROOT_DIR / get_file('extracted_products'))
 
 # Run modes
 MODE_FRESH        = '1'  # start fresh
