@@ -5,7 +5,7 @@ You are continuing Migration 2 in the repository at:
 
 ## Project Context
 
-Migration 2 standardizes repository structure and asset organization without changing business logic. The canonical data, runtime, and asset layout is now established, the shared registry layer is active, and the project is in cleanup and validation prep.
+Migration 2 standardized repository structure and asset organization without changing business logic. The canonical data, runtime, and asset layout is now established, the shared registry layer is active, and the migration is complete.
 
 ## Migration Objectives
 
@@ -17,7 +17,7 @@ Migration 2 standardizes repository structure and asset organization without cha
 
 ## Current Phase
 
-Phase 6 - Legacy Cleanup and Consolidation in progress.
+Phase 8 - Finalization and Handoff complete.
 
 ## Current Status
 
@@ -27,9 +27,9 @@ Phase 6 - Legacy Cleanup and Consolidation in progress.
 - Phase 3 complete.
 - Phase 4 complete.
 - Phase 5 complete.
-- Phase 6 in progress.
-- Phase 7 pending.
-- Phase 8 pending.
+- Phase 6 complete.
+- Phase 7 complete.
+- Phase 8 complete.
 
 ## Completed Work
 
@@ -48,26 +48,15 @@ Phase 6 - Legacy Cleanup and Consolidation in progress.
 
 ## Pending Work
 
-- Sweep stale docs and scripts for retired path references.
-- Review whether remaining compatibility readers can be retired after validation.
-- Review `data_standardization/` for final placement.
-- Decide whether `scrapers/Old/` should remain as an archive.
-- Decide whether historical `image_processing/downloaded_images/` sessions need archiving.
+None.
 
 ## Open Decisions
 
-- Whether to keep compatibility readers after the final compatibility sweep.
-- Whether to fold `data_standardization/` into `data/reference/`.
-- Whether to keep `scrapers/Old/` as archive-only code.
-- Whether to preserve or relocate historical image download sessions.
-- Which stale docs should be rewritten versus left historical.
+None.
 
 ## Known Risks
 
-- Stale documentation can still reference retired paths.
-- Legacy scripts may still assume module-local locations.
-- Compatibility fallbacks may hide missed migration coverage.
-- Historical sessions under `image_processing/downloaded_images/` may be mistaken for canonical data.
+- Historical documentation may still reference retired paths for context.
 - Future runs can recreate caches unless ignored.
 
 ## Mandatory Documents To Review
@@ -99,14 +88,11 @@ Phase 6 - Legacy Cleanup and Consolidation in progress.
 
 ## Next Recommended Task
 
-Sweep stale docs and scripts for retired path references, then review whether any remaining compatibility readers can be retired.
+No further migration work is required.
 
 ## Stop Conditions
 
-- Stop if a smoke test fails and a path regression must be diagnosed.
-- Stop if a hidden consumer is found that still depends on a retired path and the minimal safe fallback is unclear.
-- Stop if a doc claim cannot be reconciled with the actual repository state.
-- Stop if the next move would change business logic instead of repository layout.
+None.
 
 ## Migration Rules
 
@@ -117,6 +103,8 @@ Sweep stale docs and scripts for retired path references, then review whether an
 - Keep the repository functional after every step.
 - Preserve compatibility until validation is complete.
 
+These rules are retained for historical reference only.
+
 ## Short Prompt For The Next Model
 
-Continue Migration 2 from the current repository state. Review the mandatory docs above, then sweep stale docs for retired path references and review whether any remaining compatibility readers can be retired. If a hidden legacy consumer still depends on a retired path, preserve the smallest safe fallback needed to keep the repository working.
+Migration 2 is complete. No further migration actions are required.

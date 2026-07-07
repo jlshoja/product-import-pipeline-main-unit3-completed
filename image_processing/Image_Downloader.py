@@ -43,7 +43,6 @@ class AdvancedImageDownloader:
 
         Path(self.output_folder).mkdir(parents=True, exist_ok=True)
 
-        self.legacy_state_file = Path(self.output_folder) / 'download_state.json'
         self.state_file = str(CANONICAL_STATE_FILE)
         self.state = self.load_state_early()
 
@@ -63,25 +62,19 @@ class AdvancedImageDownloader:
             self.setup_selenium()
 
     def load_state_early(self):
-        state_candidates = [Path(self.state_file), self.legacy_state_file]
-        for candidate in state_candidates:
-            if candidate.exists():
-                try:
-                    return load_json_state(candidate, DEFAULT_DOWNLOAD_STATE)
-                except Exception:
-                    pass
+        candidate = Path(self.state_file)
+        if candidate.exists():
+            try:
+                return load_json_state(candidate, DEFAULT_DOWNLOAD_STATE)
+            except Exception:
+                pass
         return load_json_state(Path(self.state_file), DEFAULT_DOWNLOAD_STATE)
 
     def _save_state_to_targets(self):
-        state_targets = [Path(self.state_file)]
-        if self.legacy_state_file not in state_targets:
-            state_targets.append(self.legacy_state_file)
-
-        for target in state_targets:
-            try:
-                save_json_state(target, self.state)
-            except Exception:
-                pass
+        try:
+            save_json_state(Path(self.state_file), self.state)
+        except Exception:
+            pass
 
     def _save_state_raw(self):
         self._save_state_to_targets()

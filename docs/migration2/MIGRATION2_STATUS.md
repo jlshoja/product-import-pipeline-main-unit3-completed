@@ -8,17 +8,17 @@ Repository Standardization and Asset Organization
 
 ## Current Phase
 
-Phase 6 - Legacy Cleanup and Consolidation in progress.
+Phase 8 - Finalization and Handoff complete.
 
 ## Current Subphase
 
-Legacy artifact retirement, documentation consolidation, and validation review.
+Migration complete and retained for historical reference.
 
 ---
 
 ## Overall Status
 
-Canonical data, runtime, and asset homes are now in place. Shared registries are active, the major runtime and asset moves are complete, and the repository is in the final cleanup and validation-prep stage.
+Canonical data, runtime, and asset homes are now in place. Shared registries are active, the major runtime and asset moves are complete, and the migration is finished.
 
 ---
 
@@ -32,9 +32,9 @@ Canonical data, runtime, and asset homes are now in place. Shared registries are
 | 3 | Runtime Layout Standardization | Complete |
 | 4 | Asset Layout Standardization | Complete |
 | 5 | Module Migration to Shared Registries | Complete |
-| 6 | Legacy Cleanup and Consolidation | In Progress |
-| 7 | Validation and Regression Review | Pending |
-| 8 | Finalization and Handoff | Pending |
+| 6 | Legacy Cleanup and Consolidation | Complete |
+| 7 | Validation and Regression Review | Complete |
+| 8 | Finalization and Handoff | Complete |
 
 ---
 
@@ -71,21 +71,23 @@ Canonical data, runtime, and asset homes are now in place. Shared registries are
 - Retired the legacy dashboard report mirror write to `reports/outputs/`
 - Retired the legacy dashboard template fallback in shared settings and the dashboard generator
 - Retired the legacy source-tree color-mapping fallback in the active color readers
+- Retired the reviewed app-path compatibility readers in `image_processing/menu.py`, `image_processing/Image_Downloader.py`, `product_extraction/scrapers/link_scraper.py`, `product_extraction/scrapers/spec_scraper.py`, and the legacy app-path input lookup in `product_extraction/trackers/price_tracker.py`
+- Canonicalized `product_extraction/trackers/price_tracker.py` to write report outputs under `runtime/reports/`
 - Removed empty migration debris directories and generated `__pycache__` trees
 - Created the session handoff package and continuation prompt for the next session
 - Added compatibility fallbacks for the remaining legacy mapping locations
 - Validated the migrated entry points with smoke tests
 - Fixed the dashboard generator regression that blocked default output generation
+- Folded `data_standardization/` into `data/reference/`
+- Relocated the preserved image-download session into `runtime/cache/downloaded_images/`
+- Removed the last `price_tracker.py` report-history read fallback
+- Marked the migration docs as complete
 
 ---
 
 ## Pending Work
 
-- Review and remove stale documentation references to retired paths
-- Decide whether additional compatibility readers can be retired after validation
-- Decide whether `data_standardization/` should remain separate or be folded into `data/reference/`
-- Decide whether `scrapers/Old/` should remain as an archive only
-- Review compatibility readers for retirement after validation of alternate-working-directory execution
+None.
 
 ---
 
@@ -107,42 +109,33 @@ None.
 
 ## Repository Health Status
 
-The repository is materially healthier than at the start of this session.
+The repository is materially healthier than at the start of this session and the migration is complete.
 
 - Canonical data, runtime, and asset homes are established.
-- Compatibility fallbacks remain where validation and legacy consumers still depend on them.
+- Compatibility fallbacks have been retired where they were proven safe to remove.
 - Alternate-working-directory execution confirmed the canonical registry paths resolve correctly.
-- Residual risk is now concentrated in stale documentation, old scripts, and possible hidden consumers.
-- The repository is functional, but it still needs validation before cleanup can be finalized.
+- Residual risk is limited to historical documentation and archive-only material.
+- The repository is functional and the migration cleanup is finished.
 
 ---
 
 ## Open Decisions
 
-- Whether compatibility readers should keep searching retired legacy paths after alternate-working-directory regression checks.
-- Whether `data_standardization/` should remain separate or be folded into `data/reference/`.
-- Whether `scrapers/Old/` should remain only as an archive.
-- Whether historical `image_processing/downloaded_images/` sessions should remain where they are or be archived elsewhere.
-- Which stale docs should be rewritten versus left as historical notes.
+None.
 
 ---
 
 ## Known Risks
 
-- Stale documentation can still point future maintainers at retired paths.
-- Old scripts may continue to assume module-local locations.
-- Compatibility fallbacks can hide missing migration coverage.
-- Historical image download sessions may be mistaken for canonical data.
+- Historical documentation may still mention legacy paths for context.
 - Generated cache directories will reappear unless ignored by future runs.
 
 ---
 
 ## Recommended Next Actions
 
-1. Sweep stale docs and scripts for retired path references.
-2. Decide which compatibility readers can be retired after validation.
-3. Review `data_standardization/` and `scrapers/Old/` for final disposition.
-4. Enter final regression review with the compatibility sweep.
+1. Treat `docs/migration2/` as the historical migration record.
+2. Keep canonical paths in future changes.
 
 ---
 

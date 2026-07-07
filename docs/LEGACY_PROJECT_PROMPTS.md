@@ -98,7 +98,7 @@ Prompt:
 
 Analyze only:
 
-data_standardization/
+data/reference/
 
 Do not analyze other modules.
 

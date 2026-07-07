@@ -230,7 +230,7 @@ Low
 
 
 
-\## 4. data\_standardization/word index.xlsx
+\## 4. data/reference/word index.xlsx
 
 
 
@@ -238,7 +238,7 @@ Low
 
 
 
-data\_standardization/word index.xlsx
+data/reference/word index.xlsx
 
 
 
@@ -1495,6 +1495,5 @@ Migration Readiness Impact:
 
 
 Current configuration architecture introduces avoidable migration risk and should be addressed early in the migration program.
-
 
 

@@ -7,7 +7,7 @@ Phase 0 (Migration Readiness) is complete. A validated baseline dataset exists a
 
 ## Modules
 1. product_extraction
-2. data_standardization
+2. data/reference
 3. image_processing
 4. import_builder
 

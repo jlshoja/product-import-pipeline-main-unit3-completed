@@ -21,10 +21,12 @@ It is intentionally self-contained as a historical record, but new sessions shou
 - Phase 3 is complete.
 - Phase 4 is complete.
 - Phase 5 is complete.
-- Phase 6 is in progress.
+- Phase 6 is complete.
+- Phase 7 is complete.
+- Phase 8 is complete.
 - The shared mapping spreadsheets have been moved to `data/mappings/`.
 - The canonical runtime, asset, and data folders are populated.
-- Legacy compatibility fallbacks remain only where validation still depends on them.
+- Legacy compatibility fallbacks have been retired where safe.
 - Smoke tests for the migrated entry points passed.
 - The dashboard generator regression that blocked default output generation was fixed.
 
@@ -39,6 +41,7 @@ It is intentionally self-contained as a historical record, but new sessions shou
 - Updated `product_extraction/common/configuration.py` as the bridge layer.
 - Updated core consumers in `product_extraction/` to use shared registries.
 - Updated `import_builder/paths.py` to point at the canonical mapping files.
+- Retired the reviewed app-path compatibility readers after repo-root and alternate-working-directory validation.
 - Moved these files into the canonical mapping directory:
   - `import_builder/color_mapping.xlsx` -> `data/mappings/color_mapping.xlsx`
   - `import_builder/product_names.xlsx` -> `data/mappings/product_names.xlsx`
@@ -76,17 +79,11 @@ It is intentionally self-contained as a historical record, but new sessions shou
 
 ### Next likely moves
 
-- Review and remove stale documentation references to retired paths.
-- Review whether remaining compatibility readers can be retired after validation.
-- Decide whether additional compatibility readers can be retired after validation.
-- Review `data_standardization/` and `scrapers/Old/` for final disposition.
+None.
 
 ### Expected code updates
 
-- Remove or minimize remaining hardcoded paths that still point at module-local runtime folders.
-- Update image-processing scripts to read/write from the canonical runtime folders.
-- Update any report generators that still assume module-local output directories.
-- Keep compatibility shims in place until the new locations are verified.
+None.
 
 ---
 
@@ -105,10 +102,7 @@ It is intentionally self-contained as a historical record, but new sessions shou
 
 ## Risks
 
-- Some scripts still use legacy filename literals.
-- Some workflows still depend on compatibility readers for legacy recovery paths.
-- Stale documentation can still point future maintainers at retired paths.
-- Historical image download sessions may be mistaken for canonical data.
+- Historical documentation may still point future maintainers at retired paths.
 
 ---
 

@@ -66,6 +66,18 @@ This document captures the architectural and migration decisions made during Mig
 - Rationale: The canonical mapping lives in `data/mappings/`, and `data/archives/` is sufficient for recovery.
 - Impact: The active readers no longer search the retired source-tree color mapping file.
 
+### Legacy app-path workflow readers are retired
+
+- Decision: Stop reading workflow state and handoff files from `product_extraction/` module-local app paths in the reviewed menu, downloader, link scraper, spec scraper, and price tracker entry points.
+- Rationale: Repo-root and alternate-working-directory validation confirmed the canonical `data/` and `runtime/` homes resolve correctly without those app-path lookups.
+- Impact: `image_processing/menu.py`, `image_processing/Image_Downloader.py`, `product_extraction/scrapers/link_scraper.py`, `product_extraction/scrapers/spec_scraper.py`, and the legacy app-path input lookup in `product_extraction/trackers/price_tracker.py` now resolve only canonical locations for the reviewed files.
+
+### Price tracker report history is canonicalized
+
+- Decision: `product_extraction/trackers/price_tracker.py` now writes report outputs to `runtime/reports/` while preserving a read fallback to the legacy root-level report history for previously generated files.
+- Rationale: The canonical runtime report home is `runtime/reports/`, but historical tracking files may still exist in the old root `reports/` location.
+- Impact: New `price_tracker.py` output is aligned with the runtime layout, and the fallback remains only for legacy report history reads.
+
 ### `product_extraction/color_mapping.xlsx` is archived, not retained in the source tree
 
 - Previous position: Keep `product_extraction/color_mapping.xlsx` as a legacy fallback copy.
@@ -94,23 +106,23 @@ This document captures the architectural and migration decisions made during Mig
 
 ### Compatibility readers
 
-- Deferred decision: whether to remove the remaining fallback search paths after alternate-working-directory regression checks.
-- Why deferred: the repository still benefits from compatibility adapters until regression checks confirm no hidden legacy consumer remains.
+- Resolved: the `price_tracker.py` report-history read fallback was retired after validation.
+- Rationale: the canonical output path is fixed and the alternate-working-directory check confirmed no fallback was needed.
 
 ### `data_standardization/`
 
-- Deferred decision: whether to fold `data_standardization/` into `data/reference/` or keep it separate.
-- Why deferred: the repository still needs a deliberate classification of those reference assets.
+- Resolved: `data_standardization/` was folded into `data/reference/`.
+- Rationale: the files are reference material and no longer need a separate top-level directory.
 
 ### Legacy scripts under `scrapers/Old/`
 
-- Deferred decision: whether to keep them as archive-only material or retire them.
-- Why deferred: they may still serve as historical reference or compatibility anchors.
+- Resolved: `scrapers/Old/` remains archive-only material.
+- Rationale: it is historical reference code and is not part of the active runtime path.
 
 ### Historical image download sessions
 
-- Deferred decision: whether to preserve or archive historical folders under `image_processing/downloaded_images/`.
-- Why deferred: the current migration only required runtime state and cache standardization, not preservation policy for historical sessions.
+- Resolved: the preserved image-download session was relocated under `runtime/cache/downloaded_images/`.
+- Rationale: the session is historical cache data and belongs under the canonical runtime cache tree.
 
 ---
 
@@ -118,4 +130,4 @@ This document captures the architectural and migration decisions made during Mig
 
 - Canonical runtime, data, and asset homes are now established.
 - Duplicate source-tree artifacts were removed after the canonical copies were verified.
-- Remaining decisions are focused on validation, compatibility retirement, and archival policy.
+- Remaining legacy references are historical only.

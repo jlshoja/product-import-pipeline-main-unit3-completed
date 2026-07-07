@@ -52,7 +52,7 @@ from common.date_utils import gregorian_to_jalali as _gregorian_to_jalali
 from common.file_registry import get_file
 from common.file_utils import ensure_directory
 from common.file_utils import find_latest_dated
-from common.path_registry import LEGACY_APP_DIR, ROOT_DIR, resolve_existing_path
+from common.path_registry import INTERMEDIATE_DIR, RUNTIME_REPORTS_DIR
 from common.price_utils import extract_price_from_text as _extract_price_from_text
 from common.price_utils import format_number as _format_number
 from common.price_utils import parse_numeric_price as _parse_numeric_price
@@ -77,22 +77,19 @@ def create_reports_folder():
     """
     ایجاد فولدر reports اگر وجود ندارد (نسبت به ریشه پروژه، نه cwd)
     """
-    return ensure_directory(ROOT_DIR / 'reports')
+    return ensure_directory(RUNTIME_REPORTS_DIR)
 
 
 def find_latest_tracking_file():
     """
     پیدا کردن آخرین فایل پیگیری (نسبت به ریشه پروژه، نه cwd)
     """
-    latest_file = resolve_existing_path(
-        ROOT_DIR / 'reports' / get_file('product_tracking_latest'),
-        LEGACY_APP_DIR / 'reports' / 'outputs' / get_file('product_tracking_latest'),
-    )
+    latest_file = RUNTIME_REPORTS_DIR / get_file('product_tracking_latest')
     if latest_file.exists():
         return latest_file
 
     return find_latest_dated(
-        ROOT_DIR / 'reports',
+        RUNTIME_REPORTS_DIR,
         'product_tracking_????-??-??.xlsx',
         r'product_tracking_(\d{4}-\d{2}-\d{2})\.xlsx$',
     )
@@ -1025,10 +1022,7 @@ def main():
     print(f"📁 Reports folder: {reports_dir.absolute()}\n")
     
     # ورودی نسبت به ریشه پروژه (نه cwd)
-    input_file = resolve_existing_path(
-        ROOT_DIR / get_file('extracted_products'),
-        LEGACY_APP_DIR / get_file('extracted_products'),
-    )
+    input_file = INTERMEDIATE_DIR / get_file('extracted_products')
     
     # Check input file exists
     if not Path(input_file).exists():

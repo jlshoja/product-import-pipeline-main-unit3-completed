@@ -31,37 +31,17 @@ from common.progress_utils import load_json_state, save_json_state
 # اسکریپت از کجا صدا زده شود (مثلاً از یک .bat بیرون از پوشه پروژه)
 # درست کار کند.
 from common.file_registry import get_file
-from common.path_registry import INTERMEDIATE_DIR, INPUTS_DIR, LEGACY_APP_DIR, ROOT_DIR, resolve_existing_path
+from common.path_registry import INTERMEDIATE_DIR, INPUTS_DIR, ROOT_DIR, RUNTIME_LOGS_DIR
 
 # ─────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────
-PROGRESS_FILE   = str(resolve_existing_path(
-    ROOT_DIR / "runtime" / "state" / get_file('link_scraper_progress'),
-    LEGACY_APP_DIR / get_file('link_scraper_progress'),
-))  # full run state
-CHECKPOINT_FILE = str(resolve_existing_path(
-    ROOT_DIR / "runtime" / "state" / get_file('checkpoint'),
-    LEGACY_APP_DIR / get_file('checkpoint'),
-))  # incremental checkpoint after each URL
-ERROR_LOG_FILE  = str(resolve_existing_path(
-    ROOT_DIR / "logs" / get_file('error_log'),
-    LEGACY_APP_DIR / 'logs' / get_file('error_log'),
-))  # all errors
-PAGE_SOURCE_FILE = str(resolve_existing_path(
-    ROOT_DIR / "runtime" / "cache" / "page_source.html",
-    LEGACY_APP_DIR / "page_source.html",
-))  # captured HTML for debugging
-INPUT_FILE      = str(resolve_existing_path(
-    INPUTS_DIR / get_file('archive_urls'),
-    ROOT_DIR / get_file('archive_urls'),
-    LEGACY_APP_DIR / get_file('archive_urls'),
-))
-OUTPUT_FILE     = str(resolve_existing_path(
-    INTERMEDIATE_DIR / get_file('extracted_products'),
-    ROOT_DIR / get_file('extracted_products'),
-    LEGACY_APP_DIR / get_file('extracted_products'),
-))
+PROGRESS_FILE   = str(ROOT_DIR / "runtime" / "state" / get_file('link_scraper_progress'))  # full run state
+CHECKPOINT_FILE = str(ROOT_DIR / "runtime" / "state" / get_file('checkpoint'))  # incremental checkpoint after each URL
+ERROR_LOG_FILE  = str(RUNTIME_LOGS_DIR / get_file('error_log'))  # all errors
+PAGE_SOURCE_FILE = str(ROOT_DIR / "runtime" / "cache" / "page_source.html")  # captured HTML for debugging
+INPUT_FILE      = str(INPUTS_DIR / get_file('archive_urls'))
+OUTPUT_FILE     = str(INTERMEDIATE_DIR / get_file('extracted_products'))
 
 # Run modes
 MODE_FRESH        = '1'  # start fresh
@@ -332,13 +312,6 @@ def extract_products_from_archive(driver, archive_url: str) -> tuple[list, list]
         if not products_ok:
             with open(PAGE_SOURCE_FILE, 'w', encoding='utf-8') as f:
                 f.write(driver.page_source)
-            legacy_page_source = LEGACY_APP_DIR / "page_source.html"
-            if legacy_page_source != Path(PAGE_SOURCE_FILE):
-                try:
-                    with open(legacy_page_source, 'w', encoding='utf-8') as f:
-                        f.write(driver.page_source)
-                except OSError:
-                    pass
             print(f"  → {PAGE_SOURCE_FILE} saved for debugging")
             sys.stdout.flush()
 

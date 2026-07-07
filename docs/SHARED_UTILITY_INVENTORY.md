@@ -77,7 +77,7 @@ Deferred:
 import_builder/color_manager.py
 import_builder/color_mapping.xlsx
 image_processing/
-product_extraction/scrapers/Old/
+product_extraction/scrapers/Old/ (archive-only)
 ```
 
 ## Migration Complexity

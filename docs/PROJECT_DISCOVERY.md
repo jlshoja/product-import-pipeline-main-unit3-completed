@@ -2,7 +2,7 @@
 
 ## Verified Modules
 - product_extraction
-- data_standardization
+- data/reference
 - image_processing
 - import_builder
 

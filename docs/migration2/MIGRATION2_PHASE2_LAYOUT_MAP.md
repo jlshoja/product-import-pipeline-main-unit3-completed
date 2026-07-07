@@ -91,7 +91,7 @@ Target layout:
 
 1. Approve the canonical homes listed above.
 2. Decide which module-local spreadsheets become shared mappings and which remain module-private.
-3. Decide whether `image_processing/downloaded_images/` should become a runtime cache or a preserved asset area.
+3. Preserve historical image-download sessions under `runtime/cache/downloaded_images/`.
 4. Move only the lowest-risk shared mappings first, after the directory targets are approved.
 
 ---

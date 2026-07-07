@@ -6,8 +6,8 @@ Migration 2 is the repository standardization effort for `product-import-pipelin
 
 ## 2. Current Migration Phase
 
-Phase 6 - Legacy Cleanup and Consolidation in progress.
-Validation smoke tests and alternate-working-directory regression checks have passed.
+Phase 8 - Finalization and Handoff complete.
+Validation smoke tests and alternate-working-directory regression checks passed.
 
 ## 3. Completed Work
 
@@ -29,11 +29,12 @@ Validation smoke tests and alternate-working-directory regression checks have pa
 
 ## 4. Repository Changes Made
 
-- `product_extraction/` now reads/writes canonical runtime, data, and asset paths first, with fallbacks where validation and legacy consumers still need them.
+- `product_extraction/` now reads/writes canonical runtime, data, and asset paths first. The reviewed app-path compatibility readers have been retired.
 - `import_builder/web_panel_v12.py` now prefers `assets/templates/import_builder/`.
 - `product_extraction/web_panel_interactive.py` now prefers `assets/templates/product_extraction/`.
 - `product_extraction/scrapers/link_scraper.py` now prefers `data/inputs/`, `data/intermediate/`, `runtime/state/`, `runtime/cache/`, and `runtime/logs/`.
 - `product_extraction/scrapers/spec_scraper.py` now prefers `data/intermediate/` and `data/outputs/`.
+- `product_extraction/trackers/price_tracker.py` now writes to `runtime/reports/`.
 - `product_extraction/reports/dashboard_generator.py` now prefers `runtime/reports/` and `assets/templates/`.
 - `product_extraction/utils/logger.py` now writes shared logs under `runtime/logs/`.
 
@@ -56,36 +57,24 @@ Validation smoke tests and alternate-working-directory regression checks have pa
 
 ## 7. Outstanding Problems
 
-- Stale docs and historical references still need a sweep for retired paths.
-- Some compatibility fallback readers remain intentionally in place until a final retirement decision is made.
-- Historical image download sessions remain under `image_processing/downloaded_images/`.
-- `scrapers/Old/` still exists as legacy code material.
+None.
 
 ## 8. Open Decisions
 
-- Whether to retire the remaining compatibility readers after the final compatibility sweep.
-- Whether to fold `data_standardization/` into `data/reference/`.
-- Whether to keep `scrapers/Old/` as archive-only material.
-- Whether historical image download sessions should be archived elsewhere.
+None.
 
 ## 9. Pending Tasks
 
-- Sweep stale docs and scripts for retired path references.
-- Review compatibility readers for retirement after the final compatibility sweep.
-- Decide the final disposition of `data_standardization/` and `scrapers/Old/`.
+None.
 
 ## 10. Recommended Next Actions
 
-1. Update or archive stale documentation references.
-2. Decide which compatibility readers can be removed after validation.
-3. Finalize the disposition of `data_standardization/` and `scrapers/Old/`.
+1. Treat this file as a historical reference.
+2. Preserve canonical layout decisions in future changes.
 
 ## 11. Known Risks
 
-- Stale documentation can still point future maintainers at retired paths.
-- Old scripts may continue to assume module-local locations.
-- Compatibility fallbacks can hide missing migration coverage.
-- Historical image download sessions may be mistaken for canonical data.
+- Historical documentation may still mention legacy paths for context.
 - Generated cache directories will reappear unless future runs ignore them.
 
 ## 12. Important Context For Future Sessions
@@ -93,7 +82,7 @@ Validation smoke tests and alternate-working-directory regression checks have pa
 - `MIGRATION2_STATUS.md` is now the canonical progress snapshot.
 - `MIGRATION2_DECISION_LOG.md` records the architectural decisions and deferred items.
 - `MIGRATION2_CONTINUATION_HANDOFF.md` is now a legacy reference only.
-- The next session should focus on validation and any remaining doc cleanup, not on more physical moves unless a hidden legacy path is discovered.
+- No further migration session is needed.
 
 ## 13. Critical Files For Review
 

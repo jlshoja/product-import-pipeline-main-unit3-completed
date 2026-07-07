@@ -134,7 +134,7 @@ Why this phase comes after the registry design:
 
 ## Phase 6 - Legacy Cleanup and Consolidation
 
-Status: In Progress
+Status: Complete
 
 Objectives:
 
@@ -142,7 +142,7 @@ Objectives:
 - retire duplicate mapping sources where approved
 - remove obsolete compatibility layers only after validation
 
-Why this phase is deferred:
+Why this phase was deferred:
 
 - cleanup before verification would increase the chance of breakage
 - some legacy scripts may still be used as operational entry points
@@ -151,7 +151,7 @@ Why this phase is deferred:
 
 ## Phase 7 - Validation and Regression Review
 
-Status: Pending
+Status: Complete
 
 Objectives:
 
@@ -160,7 +160,7 @@ Objectives:
 - confirm report generation and artifact creation still work
 - confirm legacy compatibility paths can be removed or archived safely
 
-Why this phase is final:
+Why this phase was final:
 
 - structural migration should not be considered complete until the repository still behaves as expected
 
@@ -168,7 +168,7 @@ Why this phase is final:
 
 ## Phase 8 - Finalization and Handoff
 
-Status: Pending
+Status: Complete
 
 Objectives:
 
@@ -177,7 +177,7 @@ Objectives:
 - record any remaining exceptions as explicit legacy decisions
 - prepare the implementation handoff
 
-Why this phase remains last:
+Why this phase remained last:
 
 - finalization should only happen after validation proves that the target structure is stable
 
