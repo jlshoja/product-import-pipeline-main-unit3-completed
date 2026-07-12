@@ -22,7 +22,7 @@ echo   [4] Compare Scans
 echo   [5] Track Prices
 echo   [6] Generate Dashboard
 echo   [7] Open Product Extraction Web Panel
-echo   [8] Run Import Builder Menu
+echo   [8] Run Import Builder (WooCommerce CSV)
 echo   [9] Run Image Processing Menu
 echo   [10] Open Reports Folder
 echo   [0] Exit
@@ -86,11 +86,12 @@ call :PAUSE_RETURN
 cls
 echo.
 echo ============================================================================
-echo Scraping Product Specifications
+echo Scraping Product Specifications + Standardize
 echo ============================================================================
 echo.
 pushd product_extraction
 python main.py scrape-specs
+python main.py standardize
 popd
 call :PAUSE_RETURN
 
@@ -146,11 +147,11 @@ call :PAUSE_RETURN
 cls
 echo.
 echo ============================================================================
-echo Starting Import Builder Menu
+echo Running Import Builder (Automated)
 echo ============================================================================
 echo.
-pushd import_builder
-call start.bat
+pushd product_extraction
+python main.py import-build
 popd
 call :PAUSE_RETURN
 

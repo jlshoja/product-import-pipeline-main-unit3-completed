@@ -20,6 +20,9 @@ pytest-cov==4.1.0
 tqdm==4.66.1
 colorama==0.4.6
 
+# AI / Translation
+google-generativeai>=0.8.0
+
 # Web Panel
 flask==3.0.0
 

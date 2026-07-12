@@ -10,8 +10,9 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from dotenv import load_dotenv
 
-#  Environment Variables
-load_dotenv()
+#  Environment Variables - always load from project root
+_root = Path(__file__).resolve().parent.parent.parent
+load_dotenv(_root / '.env')
 
 try:
     from common.file_registry import get_file
@@ -136,6 +137,19 @@ class ColorConfig:
 
 
 # ===========================
+#  Standardizer
+# ===========================
+
+@dataclass
+class StandardizerConfig:
+    """Configuration for product standardizer module"""
+    extra_discount_percent: float = float(os.getenv('EXTRA_DISCOUNT_PERCENT', '0'))
+    stock_quantity: int = int(os.getenv('STOCK_QUANTITY', '100'))
+    gemini_api_key: str = os.getenv('GEMINI_API_KEY', '')
+    enable_gemini: bool = os.getenv('ENABLE_GEMINI', 'true').lower() == 'true'
+
+
+# ===========================
 #  Price Tracker
 # ===========================
 
@@ -239,6 +253,7 @@ class AppConfig:
     # Components
     scraper: ScraperConfig = field(default_factory=ScraperConfig)
     color: ColorConfig = field(default_factory=ColorConfig)
+    standardizer: StandardizerConfig = field(default_factory=StandardizerConfig)
     tracker: TrackerConfig = field(default_factory=TrackerConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
@@ -262,29 +277,7 @@ class AppConfig:
     
     def _create_required_files(self):
         """ ‌ """
-        #   .env    
-        env_file = BASE_DIR / '.env'
-        if not env_file.exists():
-            with open(env_file, 'w', encoding='utf-8') as f:
-                f.write("""# Scraper Configuration
-HEADLESS_MODE=false
-MAX_SCROLLS=15
-PAGE_TIMEOUT=20
-
-# Logging
-LOG_LEVEL=INFO
-
-# Database (Optional)
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=products
-DB_USER=admin
-DB_PASSWORD=
-
-# Notifications (Optional)
-TELEGRAM_TOKEN=
-TELEGRAM_CHAT_ID=
-""")
+        pass
     
     def get_summary(self) -> Dict:
         """  """

@@ -1,99 +1,51 @@
 # ==========================================
-
 # Python
-
 # ==========================================
-
-**pycache**/
+__pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyo
 *$py.class
+*.egg-info/
+build/
+dist/
 
 # ==========================================
-
 # Virtual Environments
-
 # ==========================================
-
 venv/
 .venv/
 env/
 ENV/
-
 **/venv/
 **/.venv/
 **/env/
 **/ENV/
-
 imagetools_env/
 **/imagetools_env/
 
 # ==========================================
-
 # IDE / Editors
-
 # ==========================================
-
 .vscode/
 .idea/
 .zed/
+*.swp
+*.swo
+*.tmp
+*.bak
+*~
 
 # ==========================================
-
-# Environment Variables
-
+# Environment & Secrets
 # ==========================================
-
 .env
 .env.*
 !.env.example
 
 # ==========================================
-
-# Logs
-
+# OS Files
 # ==========================================
-
-*.log
-logs/
-
-# ==========================================
-
-# Temporary / Cache
-
-# ==========================================
-
-tmp/
-temp/
-cache/
-.cache/
-
-# ==========================================
-
-# Build / Distribution
-
-# ==========================================
-
-build/
-dist/
-*.egg-info/
-
-# ==========================================
-
-# Test Coverage
-
-# ==========================================
-
-.coverage
-htmlcov/
-.pytest_cache/
-
-# ==========================================
-
-# Operating System
-
-# ==========================================
-
 .DS_Store
 Thumbs.db
 desktop.ini
@@ -102,85 +54,75 @@ $RECYCLE.BIN/
 .Trashes/
 
 # ==========================================
-
-# Image Processing Outputs
+# Testing
+# ==========================================
+.coverage
+htmlcov/
+.pytest_cache/
 
 # ==========================================
+# Runtime (logs, state, cache, reports)
+# ==========================================
+runtime/logs/
+runtime/state/
+runtime/cache/
+runtime/reports/archive/
 
-image_processing/downloaded_images/
-image_processing/uploads/
-image_processing/output/
-image_processing/imagetools_env/
-
-# Ignore these folders anywhere
-
-**/downloaded_images/
-**/uploads/
-**/output/
-
-# Generated Excel files
-
-image_processing/extracted_products.xlsx
-**/extracted_products.xlsx
-
-# Generated JSON
-
-progress.json
-link_scraper_progress.json
-
-# HTML dumps
-
-page_source.html
+# Keep generated reports that are actively viewed
+# but ignore the archive of old snapshots
 
 # ==========================================
-
-# Product Extraction Outputs
+# Data — pipeline inputs/outputs (generated)
+# ==========================================
+data/inputs/
+data/intermediate/
+data/outputs/
+data/archives/
 
 # ==========================================
+# Data — mappings & reference (tracked)
+# ==========================================
+# These ARE tracked (don't ignore):
+#   data/mappings/*.xlsx
+#   data/reference/
 
+# ==========================================
+# Legacy product_extraction outputs
+# ==========================================
 product_extraction/debug_screenshots/
 **/debug_screenshots/
-
-# Reports archive/output folders
-
 product_extraction/reports/archive/
 product_extraction/reports/outputs/
-
-# Generated report files
-
 product_extraction/reports/*.xlsx
 product_extraction/reports/*.html
 product_extraction/reports/*_skus_to_delete.txt
-product_extraction/reports/*.html
-
-# Additional generated files
-
-product_extraction/reports/snapshot_*.xlsx
-product_extraction/reports/product_changes_*.xlsx
-product_extraction/reports/product_details_*.xlsx
 
 # ==========================================
-
-# Generated Excel Files
+# Log files anywhere
+# ==========================================
+*.log
+logs/
 
 # ==========================================
-
-archive_urls.xlsx
-checkpoint.xlsx
-product_details_complete.xlsx
+# Import Builder generated files
+# ==========================================
+import_builder/uploads/
+import_builder/output/
 
 # ==========================================
-
-# Misc
+# Image Processing generated files
+# ==========================================
+image_processing/downloaded_images/
+image_processing/uploads/
+image_processing/output/
 
 # ==========================================
+# Baseline samples (tracked, un-ignore)
+# ==========================================
+!baseline/
+!baseline/**
 
-*.tmp
-*.bak
-*.swp
-*.swo
-
-# ============================================
-!baseline/sample_input/archive_urls.xlsx
-!baseline/sample_output/extracted_products.xlsx
-!baseline/sample_output/product_details_complete.xlsx
+# ==========================================
+# Claude Code
+# ==========================================
+.claude/plans/

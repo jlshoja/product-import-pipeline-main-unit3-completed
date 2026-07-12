@@ -10,6 +10,7 @@ FILE_GROUPS = {
         "archive_urls": "archive_urls.xlsx",
         "extracted_products": "extracted_products.xlsx",
         "product_details": "product_details_complete.xlsx",
+        "standardized_output": "product.csv",
         "product_tracking_latest": "product_tracking_LATEST.xlsx",
     },
     "state": {
@@ -22,8 +23,6 @@ FILE_GROUPS = {
     "mappings": {
         "color_mapping": "color_mapping.xlsx",
         "product_names": "product_names.xlsx",
-    },
-    "reference": {
         "standard_categories": "standard_categories.xlsx",
         "standard_colors": "standar_colors.xlsx",
         "pricing_sample": "pricing_sample.xlsx",
@@ -33,6 +32,7 @@ FILE_GROUPS = {
         "main_log": "main.log",
         "tracker_log": "tracker.log",
         "scraper_log": "scraper.log",
+        "standardizer_log": "standardizer.log",
         "error_log": "error.log",
         "color_manager_log": "color_manager.log",
         "missing_products_log": "missing_products.log",

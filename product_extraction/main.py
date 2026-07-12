@@ -80,25 +80,67 @@ class ProductScraperApp:
         self.logger.info("="*70)
         self.logger.info("[2]  Running Spec Scraper")
         self.logger.info("="*70)
-        
+
         try:
             import scrapers.spec_scraper as spec_scraper_module
-            
+
             # Run the scraper
             spec_scraper_module.main()
-            
+
             self.logger.info(" Spec Scraper completed successfully")
             return True
-                
+
         except Exception as e:
             self.logger.error(f"Error in Spec Scraper: {e}", exc_info=True)
             return False
+
+    @log_execution_time()
+    def run_standardizer(self):
+        """Run Product Standardizer"""
+        self.logger.info("="*70)
+        self.logger.info("[3]  Running Standardizer")
+        self.logger.info("="*70)
+
+        try:
+            import standardizer
+
+            result = standardizer.main()
+
+            self.logger.info(" Standardizer completed successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error in Standardizer: {e}", exc_info=True)
+            return False
     
+    @log_execution_time()
+    def run_import_builder(self):
+        """Run Import Builder (WooCommerce CSV generation)"""
+        self.logger.info("="*70)
+        self.logger.info("[4]  Running Import Builder")
+        self.logger.info("="*70)
+
+        try:
+            import_builder_dir = str(ROOT_DIR / "import_builder")
+            if import_builder_dir not in sys.path:
+                sys.path.insert(0, import_builder_dir)
+
+            from runner import main as import_builder_main
+
+            result = import_builder_main()
+
+            self.logger.info(" Import Builder completed successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error in Import Builder: {e}", exc_info=True)
+            return False
+
     @log_execution_time()
     def run_price_tracker(self, input_file=get_file('extracted_products')):
         """Run Price Tracker"""
         self.logger.info("="*70)
-        self.logger.info("[3]  Running Price Tracker")
+        self.logger.info("[5]  Running Price Tracker")
         self.logger.info("="*70)
         
         try:
@@ -120,7 +162,7 @@ class ProductScraperApp:
     def generate_dashboard(self):
         """Generate Dashboard"""
         self.logger.info("="*70)
-        self.logger.info("[4]  Generating Dashboard")
+        self.logger.info("[6]  Generating Dashboard")
         self.logger.info("="*70)
         
         try:
@@ -160,6 +202,8 @@ class ProductScraperApp:
         steps = [
             ("Link Scraper", self.run_link_scraper),
             ("Spec Scraper", self.run_spec_scraper),
+            ("Standardizer", self.run_standardizer),
+            ("Import Builder", self.run_import_builder),
             ("Price Tracker", self.run_price_tracker),
             ("Dashboard", self.generate_dashboard)
         ]
@@ -240,7 +284,7 @@ def main():
     parser.add_argument(
         'command',
         nargs='?',
-        choices=['scrape-links', 'scrape-specs', 'track', 'dashboard', 'full', 'test'],
+        choices=['scrape-links', 'scrape-specs', 'standardize', 'import-build', 'track', 'dashboard', 'full', 'test'],
         default='full',
         help='Command to execute'
     )
@@ -285,6 +329,10 @@ def main():
         success = app.run_link_scraper(args.input or get_file('archive_urls'))
     elif args.command == 'scrape-specs':
         success = app.run_spec_scraper(args.input or get_file('extracted_products'))
+    elif args.command == 'standardize':
+        success = app.run_standardizer()
+    elif args.command == 'import-build':
+        success = app.run_import_builder()
     elif args.command == 'track':
         success = app.run_price_tracker(args.input or get_file('extracted_products'))
     elif args.command == 'dashboard':

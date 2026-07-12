@@ -18,9 +18,9 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 # ============================================================
 # Default Settings — edit here
 # ============================================================
-EXCEL_FILE        = "extracted_products.xlsx"
-DOWNLOADED_FOLDER = "./downloaded_images"
-OUTPUT_FOLDER     = "./output"
+EXCEL_FILE        = str(ROOT_DIR / "data" / "intermediate" / "extracted_products.xlsx")
+DOWNLOADED_FOLDER = str(ROOT_DIR / "data" / "outputs" / "downloaded_images")
+OUTPUT_FOLDER     = str(ROOT_DIR / "data" / "outputs" / "processed_images")
 USE_SELENIUM      = True
 MAX_RETRIES       = 3
 GALLERY_SIZE_KB   = 50
