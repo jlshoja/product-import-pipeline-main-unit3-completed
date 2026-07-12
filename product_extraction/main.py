@@ -204,7 +204,6 @@ class ProductScraperApp:
             ("Spec Scraper", self.run_spec_scraper),
             ("Standardizer", self.run_standardizer),
             ("Import Builder", self.run_import_builder),
-            ("Price Tracker", self.run_price_tracker),
             ("Dashboard", self.generate_dashboard)
         ]
         
