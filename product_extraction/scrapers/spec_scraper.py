@@ -24,7 +24,7 @@ from common.file_utils import safe_delete
 from common.progress_utils import load_json_state, save_json_state
 from common.color_utils import collect_unique_normalized_colors
 from common.price_utils import clean_price_text as _clean_price_text
-from common.path_registry import ARCHIVES_DIR, INPUTS_DIR, OUTPUTS_DIR, INTERMEDIATE_DIR, ROOT_DIR, resolve_existing_path
+from common.path_registry import ARCHIVES_DIR, INPUTS_DIR, OUTPUTS_DIR, INTERMEDIATE_DIR, ROOT_DIR, RUNTIME_REPORTS_DIR, resolve_existing_path
 
 PROGRESS_FILE = str(ROOT_DIR / "runtime" / "state" / get_file('scraper_progress'))
 
@@ -1225,9 +1225,7 @@ def upsert_product(all_products, product_data, num):
 def main():
     """Main function with Resume capability - وضعیت از ستون اکسل خونده می‌شه"""
     # ── مسیرها ────────────────────────────────────────────────────────────
-    SCRAPERS_DIR = os.path.dirname(os.path.abspath(__file__))
-    ROOT_DIR     = os.path.normpath(os.path.join(SCRAPERS_DIR, '..'))
-    REPORTS_DIR  = os.path.join(ROOT_DIR, 'reports')
+    REPORTS_DIR  = str(RUNTIME_REPORTS_DIR)
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
     timestamp   = datetime.now().strftime('%Y%m%d_%H%M%S')

@@ -27,6 +27,7 @@ from common.excel_utils import (
     set_fill,
 )
 from common.file_registry import get_file
+from common.path_registry import LEGACY_APP_DIR, RUNTIME_REPORTS_DIR
 from common.file_utils import find_first_glob_match, find_latest_dated
 from common.price_utils import select_effective_price as _select_effective_price
 from common.color_utils import split_color_values as _split_color_values
@@ -585,7 +586,7 @@ def compare(scan_path, woo_path, output_path, links_path=None):
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    reports_dir = os.path.normpath(os.path.join(script_dir, "..", "reports"))
+    reports_dir = str(RUNTIME_REPORTS_DIR)
     woo_dirs = [
         os.path.normpath(
             os.path.join(
@@ -614,7 +615,8 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         scan_path = find_latest_scan(reports_dir)
         if not scan_path:
-            scan_path = find_latest_scan("reports")
+            # Legacy scans not yet migrated out of product_extraction/reports/
+            scan_path = find_latest_scan(str(LEGACY_APP_DIR / "reports"))
         if not scan_path:
             print(
                 "✗ Could not find product_details_YYYYMMDD_HHMMSS.xlsx in reports folder"

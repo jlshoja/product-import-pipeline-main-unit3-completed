@@ -15,6 +15,8 @@ import time
 import re
 import queue
 
+from common.path_registry import RUNTIME_REPORTS_DIR
+
 ASSET_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "assets" / "templates" / "product_extraction"
 LEGACY_TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 TEMPLATE_DIR = ASSET_TEMPLATE_DIR if ASSET_TEMPLATE_DIR.exists() else LEGACY_TEMPLATE_DIR
@@ -338,7 +340,7 @@ def get_files():
                 'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
             })
     
-    reports_dir = Path('reports')
+    reports_dir = RUNTIME_REPORTS_DIR
     if reports_dir.exists():
         report_files = [
             ('product_tracking_LATEST.xlsx', 'Latest Tracking'),
