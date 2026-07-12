@@ -166,7 +166,7 @@ class ProductScraperApp:
         self.logger.info("="*70)
         
         try:
-            from reports.dashboard_generator import DashboardGenerator
+            from dashboard_generator import DashboardGenerator
             import pandas as pd
             
             # Sample data
