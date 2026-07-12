@@ -342,7 +342,7 @@ class AdvancedImageDownloader:
         return f"{sku}{letter}"
 
     def process_single_page(self, page_num, url):
-        """پردازش یک صفحه محصول"""
+        """Process a single product page"""
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"Processing page {page_num}: {url}")
         self.logger.info(f"{'='*60}")
@@ -352,12 +352,12 @@ class AdvancedImageDownloader:
             self.logger.info("  [BS4] No images via BeautifulSoup — trying Selenium...")
             image_urls = self.get_images_selenium(url)
 
-        # ── FIX 1: عکسی پیدا نشد → جزو no_image_pages، نه completed ──
+        # ── FIX 1: No image found → goes to no_image_pages, not completed ──
         if not image_urls:
             self.logger.warning(f"   No images found on page — marking as No Images Found (will retry later)")
             if page_num not in self.state['no_image_pages']:
                 self.state['no_image_pages'].append(page_num)
-            # از completed حذف می‌کنیم اگر قبلاً اشتباه اضافه شده بود
+            # Remove from completed if it was mistakenly added before
             if page_num in self.state['completed_pages']:
                 self.state['completed_pages'].remove(page_num)
             self.save_state()
@@ -400,16 +400,16 @@ class AdvancedImageDownloader:
 
             time.sleep(0.5)
 
-        # ── FIX 2: فقط وقتی هیچ خطایی نبود completed می‌کنیم ──
+        # ── FIX 2: Only mark completed if there were no errors ──
         if not failed_images:
             if page_num not in self.state['completed_pages']:
                 self.state['completed_pages'].append(page_num)
-            # اگر قبلاً در no_image_pages بود حذفش می‌کنیم
+            # Remove from no_image_pages if it was there before
             if page_num in self.state.get('no_image_pages', []):
                 self.state['no_image_pages'].remove(page_num)
             self.logger.info(f"  [OK] Page {page_num} completed successfully")
         else:
-            # ── FIX 3: محصول ناقص را از completed خارج می‌کنیم ──
+            # ── FIX 3: Remove incomplete product from completed ──
             if page_num in self.state['completed_pages']:
                 self.state['completed_pages'].remove(page_num)
             self.state['failed_images'][str(page_num)] = failed_images
@@ -419,7 +419,7 @@ class AdvancedImageDownloader:
         return downloaded_paths, failed_images
 
     def retry_failed_images(self, df, per_image_retries=3):
-        """retry برای تصاویر دانلود‌نشده (خطای دانلود)"""
+        """retry for undownloaded images (download error)"""
         if not self.state.get('failed_images'):
             return 0, 0
 
@@ -486,8 +486,8 @@ class AdvancedImageDownloader:
 
     def retry_no_image_pages(self, df, urls):
         """
-        retry برای محصولاتی که اصلاً عکسی extract نشد.
-        دوباره به صفحه می‌ره و سعی می‌کنه عکس پیدا کنه.
+        retry for products where no image was extracted at all.
+        Goes back to the page and tries again to find an image.
         """
         no_image = self.state.get('no_image_pages', [])
         if not no_image:
@@ -556,7 +556,7 @@ class AdvancedImageDownloader:
         with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name='All Products', index=False)
 
-            # شیت محصولات ناقص (دانلود جزئی یا کلی شکست خورده)
+            # Sheet of incomplete products (partial or full download failure)
             still_failed = {k: v for k, v in self.state.get('failed_images', {}).items() if v}
             if still_failed:
                 failed_rows = []
@@ -571,7 +571,7 @@ class AdvancedImageDownloader:
                     pd.DataFrame(failed_rows).to_excel(writer, sheet_name='Failed Downloads', index=False)
                     self.logger.info(f"  [SHEET] Failed Downloads sheet: {len(failed_rows)} products")
 
-            # شیت محصولاتی که اصلاً عکسی پیدا نشد
+            # Sheet of products where no image was found at all
             no_img = self.state.get('no_image_pages', [])
             if no_img:
                 no_img_rows = []
@@ -586,7 +586,7 @@ class AdvancedImageDownloader:
         return output_excel
 
     def process_urls(self):
-        """پردازش کامل همه URLها"""
+        """Full processing of all URLs"""
         df = pd.read_excel(self.excel_path)
         self._build_sku_map(df)
         self._ensure_columns(df)
@@ -621,10 +621,10 @@ class AdvancedImageDownloader:
         else:
             self.logger.info(f"[>] Starting fresh: {len(urls)} products to process")
 
-        # ── پردازش محصولات ──
-        # محصولاتی که باید پردازش بشن:
-        # در حالت resume: همه‌ای که نه completed هستن، نه (no_image و قرار نیست retry بشن)
-        # در حالت fresh: همه
+        # ── Processing products ──
+        # Products that need to be processed:
+        # In resume mode: everything not completed and not (no_image and not scheduled for retry)
+        # In fresh mode: everything
         for page_num in range(1, len(urls) + 1):
             url = urls[page_num - 1]
 
@@ -661,7 +661,7 @@ class AdvancedImageDownloader:
             self.save_state()
             df.to_excel(temp_excel, index=False)
 
-        # ── Retry خودکار بعد از پردازش همه محصولات ──
+        # ── Automatic retry after processing all products ──
         if self.state.get('failed_images'):
             failed_count = sum(len(v) for v in self.state['failed_images'].values())
             self.logger.info(f"\n[RELOAD] Final retry: {failed_count} failed images...")
@@ -690,7 +690,7 @@ class AdvancedImageDownloader:
         return output_excel
 
     def retry_only(self):
-        """فقط محصولات ناقص و بی‌عکس را retry می‌کند"""
+        """Only retries incomplete and imageless products"""
         has_failed = bool(self.state.get('failed_images'))
         has_no_image = bool(self.state.get('no_image_pages'))
 
@@ -704,7 +704,7 @@ class AdvancedImageDownloader:
         self._ensure_columns(df)
         urls = df['Product URL'].tolist() if 'Product URL' in df.columns else df[df.columns[0]].tolist()
 
-        # بازسازی Image_Paths برای محصولات completed
+        # Rebuild Image_Paths for completed products
         for page_num in self.state.get('completed_pages', []):
             row_idx = page_num - 1
             if row_idx < len(df):
@@ -735,15 +735,15 @@ class AdvancedImageDownloader:
 
     def download_incomplete_only(self):
         """
-        فقط محصولاتی که وضعیتشان Incomplete یا Failed یا No Images Found است
-        را از اول دانلود می‌کند — بدون دست زدن به محصولات OK.
+        Downloads from scratch only the products whose status is
+        Incomplete, Failed, or No Images Found — without touching OK products.
         """
         df = pd.read_excel(self.excel_path)
         self._build_sku_map(df)
         self._ensure_columns(df)
         urls = df['Product URL'].tolist() if 'Product URL' in df.columns else df[df.columns[0]].tolist()
 
-        # تعیین محصولاتی که باید دانلود شوند
+        # Determine which products should be downloaded
         target_pages = []
         for idx, row in df.iterrows():
             page_num = idx + 1
@@ -780,7 +780,7 @@ class AdvancedImageDownloader:
             self.save_state()
             df.to_excel(temp_excel, index=False)
 
-        # retry خودکار
+        # automatic retry
         if self.state.get('failed_images'):
             self.retry_failed_images(df, per_image_retries=3)
         if self.state.get('no_image_pages'):
@@ -820,11 +820,11 @@ if __name__ == "__main__":
         max_retries=MAX_RETRIES
     )
 
-    # حالت‌های اجرا:
-    #   full             — دانلود کامل همه محصولات
-    #   resume           — ادامه از جایی که متوقف شد
-    #   retry_only       — فقط محصولات ناقص/بی‌عکس را retry کن
-    #   incomplete_only  — فقط محصولاتی که OK نیستند را دانلود کن
+    # Run modes:
+    #   full             — full download of all products
+    #   resume           — continue from where it stopped
+    #   retry_only       — only retry incomplete/imageless products
+    #   incomplete_only  — only download products that are not OK
     run_mode = os.environ.get("IMG_MODE", "full")
 
     if run_mode == "retry_only":
