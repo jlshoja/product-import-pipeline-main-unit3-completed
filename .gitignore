@@ -126,3 +126,22 @@ image_processing/output/
 # Claude Code
 # ==========================================
 .claude/plans/
+
+
+
+# Import Builder documentation
+assets/help/import_builder/*.docx
+assets/help/import_builder/*.pdf
+
+# Baseline sample files
+baseline/sample_input/archive_urls.xlsx
+
+baseline/sample_output/extracted_products.xlsx
+baseline/sample_output/product.csv
+baseline/sample_output/product_details_complete.xlsx
+baseline/sample_output/woocommerce_import_*.csv
+
+# Runtime reports
+runtime/reports/price_history.xlsx
+runtime/reports/product_tracking_*.xlsx
+runtime/reports/product_tracking_*.html
