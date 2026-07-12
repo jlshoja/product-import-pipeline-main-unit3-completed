@@ -31,10 +31,15 @@ ASSET_TEMPLATES_DIR = ASSETS_DIR / "templates"
 ASSET_HELP_DIR = ASSETS_DIR / "help"
 
 # ============================================================
-# Aliases (all point into runtime/)
+# Aliases
 # ============================================================
 
-OUTPUTS_DIR = RUNTIME_OUTPUTS_DIR
+# Product artifacts (product.csv, product_details_complete.xlsx, images,
+# WooCommerce import CSV) all live under data/outputs/. The image-processing
+# and import_builder modules read/write there with hardcoded paths, so the
+# standardizer and spec_scraper must target the same folder for the handoff
+# to work. Logs and reports stay consolidated under runtime/.
+OUTPUTS_DIR = DATA_DIR / "outputs"
 LOGS_DIR = RUNTIME_LOGS_DIR
 REPORTS_DIR = RUNTIME_REPORTS_DIR
 
@@ -105,6 +110,7 @@ for directory in (
     DATA_DIR,
     INPUTS_DIR,
     INTERMEDIATE_DIR,
+    OUTPUTS_DIR,
     MAPPINGS_DIR,
     REFERENCE_DIR,
     ARCHIVES_DIR,
