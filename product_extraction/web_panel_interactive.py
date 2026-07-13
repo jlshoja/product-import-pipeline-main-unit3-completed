@@ -342,11 +342,12 @@ def get_files():
     
     reports_dir = RUNTIME_REPORTS_DIR
     if reports_dir.exists():
+        # Check files directly in reports root
         report_files = [
             ('product_tracking_LATEST.xlsx', 'Latest Tracking'),
             ('price_changes.xlsx', 'Price Changes')
         ]
-        
+
         for filename, description in report_files:
             filepath = reports_dir / filename
             if filepath.exists():
@@ -358,16 +359,32 @@ def get_files():
                     'size': stat.st_size,
                     'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
                 })
-        
-        for html_file in reports_dir.glob('product_tracking_report_*.html'):
-            stat = html_file.stat()
-            files.append({
-                'name': html_file.name,
-                'path': str(html_file).replace('\\', '/'),  # Use forward slashes
-                'description': 'HTML Report',
-                'size': stat.st_size,
-                'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-            })
+
+        # Check dated subfolders (YYYY-MM-DD) for reports and HTML files
+        for sub in reports_dir.iterdir():
+            if sub.is_dir():
+                # product_tracking_report_*.html
+                for html_file in sub.glob('product_tracking_report_*.html'):
+                    stat = html_file.stat()
+                    files.append({
+                        'name': html_file.name,
+                        'path': str(html_file).replace('\\', '/'),
+                        'description': 'HTML Report',
+                        'size': stat.st_size,
+                        'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                    })
+                # other known files inside dated folder
+                for fname in ['product_tracking_LATEST.xlsx', 'price_changes.xlsx']:
+                    fpath = sub / fname
+                    if fpath.exists():
+                        stat = fpath.stat()
+                        files.append({
+                            'name': fpath.name,
+                            'path': str(fpath).replace('\\', '/'),
+                            'description': 'Report (dated)',
+                            'size': stat.st_size,
+                            'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                        })
     
     files.sort(key=lambda x: x['modified'], reverse=True)
     

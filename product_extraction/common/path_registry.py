@@ -95,6 +95,29 @@ def resolve_existing_path(*candidates: Path) -> Path:
     return candidates[0]
 
 
+def get_dated_reports_dir(date_str: str = None, create: bool = True) -> Path:
+    """
+    Return a reports directory for a given date.
+
+    - date_str: optional string in YYYY-MM-DD format. If None, uses today's date
+      (ISO date). The returned path is RUNTIME_REPORTS_DIR / YYYY-MM-DD.
+    - create: if True, ensure the directory exists.
+
+    This helper allows saving reports in per-day subfolders without replacing
+    the existing RUNTIME_REPORTS_DIR constant so older code keeps working.
+    """
+    if date_str is None:
+        date = Path().cwd()  # placeholder to import datetime only when needed
+        from datetime import date as _date
+
+        date_str = _date.today().isoformat()
+
+    dated = RUNTIME_REPORTS_DIR / date_str
+    if create:
+        _ensure_directory(dated)
+    return dated
+
+
 # ============================================================
 # Ensure Directories Exist
 # ============================================================

@@ -32,6 +32,7 @@ from common.path_registry import (
     LEGACY_APP_DIR,
     RUNTIME_CACHE_DIR,
     RUNTIME_REPORTS_DIR,
+    get_dated_reports_dir,
 )
 from common.file_utils import find_first_glob_match, find_latest_dated
 from common.price_utils import select_effective_price as _select_effective_price
@@ -589,6 +590,7 @@ def compare(scan_path, woo_path, output_path, links_path=None):
 # ─── اجرا ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    # default reports dir as string for backward compatibility
     reports_dir = str(RUNTIME_REPORTS_DIR)
     woo_dirs = [
         str(RUNTIME_CACHE_DIR / "import_builder" / "uploads"),
@@ -619,11 +621,18 @@ if __name__ == "__main__":
             print("✗ Could not find woocommerce_import_*.csv in uploads folder")
             sys.exit(1)
 
-        date_match = re.search(
-            r"product_details_(\d{8}_\d{6})", os.path.basename(scan_path)
-        )
-        date_str = date_match.group(1) if date_match else "unknown"
-        output_path = os.path.join(reports_dir, f"product_changes_{date_str}.xlsx")
+        date_match = re.search(r"product_details_(\d{8}_\d{6})", os.path.basename(scan_path))
+        date_str = date_match.group(1) if date_match else None
+
+        # Save in a dated subdirectory (YYYY-MM-DD) when possible to keep reports tidy
+        if date_str:
+            # date_str is YYYYMMDD_HHMMSS -> YYYY-MM-DD
+            dated = f"{date_str[0:4]}-{date_str[4:6]}-{date_str[6:8]}"
+            dated_dir = get_dated_reports_dir(dated)
+            reports_dir = str(dated_dir)
+            output_path = os.path.join(reports_dir, f"product_changes_{date_str}.xlsx")
+        else:
+            output_path = os.path.join(reports_dir, f"product_changes_unknown.xlsx")
 
         links_path = None
         for d in links_dirs:

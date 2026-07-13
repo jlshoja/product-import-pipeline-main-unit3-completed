@@ -34,6 +34,7 @@ try:
         REPORTS_DIR,
         RUNTIME_REPORTS_DIR,
         resolve_existing_path,
+        get_dated_reports_dir,
     )
     from common.date_utils import get_persian_date as shared_get_persian_date
     from config import get_config
@@ -144,7 +145,8 @@ class DashboardGenerator:
         # ذخیره فایل
         if output_path is None:
             date_str = datetime.now().strftime("%Y-%m-%d")
-            output_path = RUNTIME_REPORTS_DIR / f"dashboard_{date_str}.html"
+            dated_dir = get_dated_reports_dir(date_str)
+            output_path = dated_dir / f"dashboard_{date_str}.html"
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
