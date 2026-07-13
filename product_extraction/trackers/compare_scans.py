@@ -640,13 +640,13 @@ if __name__ == "__main__":
             if links_path:
                 break
 
-        print(f"→ WooCommerce (سایت فعلی): {os.path.basename(woo_path)}")
-        print(f"→ اسکن جدید:               {os.path.basename(scan_path)}")
-        print(f"→ فایل خروجی:              {output_path}")
+        print(f"→ WooCommerce (current site): {os.path.basename(woo_path)}")
+        print(f"→ New scan:                  {os.path.basename(scan_path)}")
+        print(f"→ Output file:               {output_path}")
         if links_path:
-            print(f"→ فایل لینک محصولات:       {os.path.basename(links_path)}")
+            print(f"→ Product links file:        {os.path.basename(links_path)}")
         else:
-            print(f"→ فایل لینک محصولات:       پیدا نشد (شیت لینک‌ها ساخته نمی‌شه)")
+            print(f"→ Product links file:        not found (links sheet will be skipped)")
         print()
 
         # ── هشدار ترتیب زمانی ────────────────────────────────────────
@@ -656,17 +656,17 @@ if __name__ == "__main__":
         _scan_ts = re.search(r"(\d{8}_\d{6})", os.path.basename(scan_path))
         _woo_ts = re.search(r"(\d{8}_\d{6})", os.path.basename(woo_path))
         if _scan_ts and _woo_ts and _woo_ts.group(1) >= _scan_ts.group(1):
-            print("⚠️  هشدار: فایل WooCommerce از اسکن جدیدتر (یا هم‌زمان) است.")
+            print("⚠️  Warning: WooCommerce file is newer than (or same as) the scan.")
             print(f"    WooCommerce: {_woo_ts.group(1)}")
-            print(f"    اسکن:        {_scan_ts.group(1)}")
-            print("    احتمالاً CSV از همین اسکن ساخته شده و تغییری دیده نمی‌شود.")
+            print(f"    Scan:        {_scan_ts.group(1)}")
+            print("    The CSV was likely generated from this scan and no meaningful changes will be found.")
             if sys.stdin.isatty():
-                answer = input("    ادامه می‌دهید؟ (y/N): ").strip().lower()
+                answer = input("    Continue? (y/N): ").strip().lower()
                 if answer not in ("y", "yes"):
-                    print("لغو شد.")
+                    print("Cancelled.")
                     sys.exit(0)
             else:
-                print("    (حالت غیرتعاملی — ادامه با همین فایل‌ها)")
+                print("    (Non-interactive mode — continuing with the same files)")
             print()
 
     elif len(sys.argv) in (4, 5):

@@ -50,7 +50,7 @@ from common.excel_utils import (
 from common.date_utils import get_persian_date as _get_persian_date
 from common.date_utils import gregorian_to_jalali as _gregorian_to_jalali
 from common.file_registry import get_file
-from common.file_utils import ensure_directory
+from common.file_utils import ensure_directory, safe_copy, find_latest_dated
 from common.file_utils import find_latest_dated
 from common.path_registry import INTERMEDIATE_DIR, RUNTIME_REPORTS_DIR, get_dated_reports_dir
 from common.price_utils import extract_price_from_text as _extract_price_from_text
@@ -85,15 +85,28 @@ def find_latest_tracking_file():
     """
     پیدا کردن آخرین فایل پیگیری (نسبت به ریشه پروژه، نه cwd)
     """
+    # Prefer an explicit LATEST file in the root reports folder
     latest_file = RUNTIME_REPORTS_DIR / get_file('product_tracking_latest')
     if latest_file.exists():
         return latest_file
 
-    return find_latest_dated(
-        RUNTIME_REPORTS_DIR,
-        'product_tracking_????-??-??.xlsx',
-        r'product_tracking_(\d{4}-\d{2}-\d{2})\.xlsx$',
-    )
+    # If not present, scan dated subfolders for the most recent archive
+    if RUNTIME_REPORTS_DIR.exists():
+        # Look for product_tracking_YYYY-MM-DD.xlsx inside immediate subfolders
+        candidates = []
+        for sub in RUNTIME_REPORTS_DIR.iterdir():
+            if not sub.is_dir():
+                continue
+            candidate = find_latest_dated(sub, 'product_tracking_????-??-??.xlsx', r'product_tracking_(\d{4}-\d{2}-\d{2})\.xlsx$')
+            if candidate:
+                candidates.append(candidate)
+
+        if candidates:
+            # return the most recently modified among candidates
+            candidates.sort(key=lambda p: p.stat().st_mtime)
+            return candidates[-1]
+
+    return None
 
 
 def load_previous_data(file_path):
@@ -932,7 +945,7 @@ def save_to_excel(current_df, new_products, price_changes, removed_products, pre
     persian_date = get_persian_date()
     date_for_filename = persian_date.replace('/', '-')
     
-    # File names in reports folder
+    # File names in reports folder (reports_dir is a dated folder)
     latest_file = reports_dir / get_file('product_tracking_latest')
     archive_file = reports_dir / f'product_tracking_{date_for_filename}.xlsx'
     
@@ -1003,6 +1016,15 @@ def save_to_excel(current_df, new_products, price_changes, removed_products, pre
     print(f"✓ Archive file saved: {archive_file}")
     sys.stdout.flush()
     
+    # Also keep/update a root-level LATEST copy for backward compatibility
+    root_latest = RUNTIME_REPORTS_DIR / get_file('product_tracking_latest')
+    try:
+        safe_copy(latest_file, root_latest, overwrite=True)
+        print(f"✓ Root LATEST updated: {root_latest}")
+        sys.stdout.flush()
+    except Exception:
+        pass
+
     return latest_file, archive_file
 
 
@@ -1014,7 +1036,7 @@ def main():
     ╔════════════════════════════════════════════════════════╗
     ║   Product Price Tracking & Comparison Tool v2.0        ║
     ║                Enhanced Edition                        ║
-    ║   ✨ با قابلیت شناسایی محصولات حذف شده و گزارش HTML  ║
+    ║   ✨ Detects removed products and generates HTML reports ║
     ╚════════════════════════════════════════════════════════╝
     """)
     

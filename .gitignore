@@ -142,6 +142,4 @@ baseline/sample_output/product_details_complete.xlsx
 baseline/sample_output/woocommerce_import_*.csv
 
 # Runtime reports
-runtime/reports/price_history.xlsx
-runtime/reports/product_tracking_*.xlsx
-runtime/reports/product_tracking_*.html
+runtime/reports/
