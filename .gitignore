@@ -141,5 +141,7 @@ baseline/sample_output/product.csv
 baseline/sample_output/product_details_complete.xlsx
 baseline/sample_output/woocommerce_import_*.csv
 
+# ==========================================
 # Runtime reports
-runtime/reports/
+# ==========================================
+runtime/reports
