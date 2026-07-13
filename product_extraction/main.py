@@ -21,6 +21,7 @@ from common.path_registry import RUNTIME_CACHE_DIR, RUNTIME_REPORTS_DIR, get_dat
 from common.file_utils import find_latest_dated
 from config import get_config
 from utils.logger import LoggerSetup, log_execution_time
+from common.pipeline_state import read_state, start_run, update_step, mark_complete
 
 
 class ProductScraperApp:
@@ -306,11 +307,36 @@ class ProductScraperApp:
             ("Import Builder", self.run_import_builder),
         ]
 
+        # Pipeline resume logic: check existing state and prompt once
+        existing = read_state()
+        resume = False
+        if existing and existing.get('status') != 'complete':
+            # ask one-time confirmation
+            try:
+                ans = input("A previous pipeline run appears incomplete. Resume remaining steps? (y/N): ").strip().lower()
+                resume = ans in ('y', 'yes')
+            except Exception:
+                resume = False
+
+        # If not resuming, start a fresh state
+        if not resume:
+            start_run()
+        else:
+            self.logger.info('Resuming previous pipeline run based on pipeline_state.json')
+
         results = {}
         for step_name, step_func in steps:
             self.logger.info(f"\n{'='*70}")
             self.logger.info(f"  {step_name}")
             self.logger.info(f"{'='*70}")
+
+            # If resuming and this step already done, skip it
+            if resume:
+                s = existing.get('steps', {}).get(step_name, {})
+                if s.get('status') == 'done':
+                    self.logger.info(f" Skipping {step_name} (already done in previous run)")
+                    results[step_name] = True
+                    continue
 
             try:
                 result = step_func()
@@ -319,6 +345,9 @@ class ProductScraperApp:
                 if step_name == "Standardizer" and isinstance(result, dict):
                     unresolved_colors = result.get('unresolved_colors', [])
                     unresolved_names = result.get('unresolved_names', [])
+
+                # update pipeline state for this step
+                update_step(step_name, 'done' if result else 'failed')
 
                 results[step_name] = bool(result)
 
@@ -330,6 +359,7 @@ class ProductScraperApp:
                     self.logger.error(f" Aborting automatic pipeline at: {step_name}")
                     break
             except Exception as e:
+                update_step(step_name, 'failed', {'error': str(e)})
                 self.logger.error(f" Error in {step_name}: {e}", exc_info=True)
                 results[step_name] = False
                 break
