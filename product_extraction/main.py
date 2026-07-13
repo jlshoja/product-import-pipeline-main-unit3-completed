@@ -16,6 +16,8 @@ project_root = ROOT_DIR / "product_extraction"
 sys.path.insert(0, str(project_root))
 
 from common.file_registry import get_file
+from common.path_registry import RUNTIME_CACHE_DIR, RUNTIME_REPORTS_DIR, get_dated_reports_dir
+from common.file_utils import find_latest_dated
 from config import get_config
 from utils.logger import LoggerSetup, log_execution_time
 
@@ -128,6 +130,26 @@ class ProductScraperApp:
 
             from runner import main as import_builder_main
 
+            # If manifests exist, set env vars so import_builder splits new/update CSVs
+            try:
+                reports_root = Path(RUNTIME_REPORTS_DIR)
+                subdirs = [d for d in reports_root.iterdir() if d.is_dir()]
+                manifest_new = manifest_updated = None
+                if subdirs:
+                    latest = max(subdirs, key=lambda p: p.stat().st_mtime)
+                    mn = latest / 'new_products_list.csv'
+                    mu = latest / 'updated_products_list.csv'
+                    if mn.exists():
+                        os.environ['NEW_MANIFEST'] = str(mn)
+                        manifest_new = str(mn)
+                    if mu.exists():
+                        os.environ['UPDATED_MANIFEST'] = str(mu)
+                        manifest_updated = str(mu)
+                if manifest_new or manifest_updated:
+                    self.logger.info(f"Import Builder: NEW_MANIFEST={manifest_new}, UPDATED_MANIFEST={manifest_updated}")
+            except Exception:
+                pass
+
             result = import_builder_main()
 
             self.logger.info(" Import Builder completed successfully")
@@ -170,8 +192,28 @@ class ProductScraperApp:
         download_env["IMG_OUTPUT"]   = downloaded_folder
         download_env["IMG_SELENIUM"] = "1"
         download_env["IMG_RETRIES"]  = "3"
-        download_env["IMG_MODE"]     = "full"
-        download_env["IMG_RESUME"]   = "fresh"
+        # If tracker produced a manifest, process only new products
+        # Look for the most recent dated reports folder containing new_products_list.csv
+        manifest_file = None
+        try:
+            reports_root = Path(RUNTIME_REPORTS_DIR)
+            subdirs = [d for d in reports_root.iterdir() if d.is_dir()]
+            if subdirs:
+                latest = max(subdirs, key=lambda p: p.stat().st_mtime)
+                candidate = latest / 'new_products_list.csv'
+                if candidate.exists():
+                    manifest_file = str(candidate)
+        except Exception:
+            manifest_file = None
+
+        if manifest_file:
+            download_env["IMG_MANIFEST"] = manifest_file
+            download_env["IMG_MODE"]     = "full"
+            download_env["IMG_RESUME"]   = "fresh"
+            self.logger.info(f"[IMG] Using manifest for image download: {manifest_file}")
+        else:
+            download_env["IMG_MODE"]     = "full"
+            download_env["IMG_RESUME"]   = "fresh"
 
         self.logger.info("[IMG] Step 1/2 - Downloading images (full, fresh)...")
         result = subprocess.run(
@@ -222,6 +264,8 @@ class ProductScraperApp:
             ("Link Scraper", self.run_link_scraper),
             ("Spec Scraper", self.run_spec_scraper),
             ("Standardizer", self.run_standardizer),
+            # After standardizer we run a tracker to produce manifests
+            # then image processing and import builder consume those manifests
             ("Image Processing", self.run_image_processing),
             ("Import Builder", self.run_import_builder),
         ]
@@ -373,7 +417,44 @@ class ProductScraperApp:
             self.logger.info(f"{'='*70}")
             
             try:
-                result = step_func()
+                # Special handling: after Standardizer, run tracker to generate manifests
+                if step_name == 'Standardizer':
+                    result = step_func()
+                    # Run tracker: prefer compare_scans if Woo CSV exists, else price_tracker
+                    try:
+                        # check for woo csv in runtime cache uploads
+                        woo_uploads = Path(RUNTIME_CACHE_DIR) / 'import_builder' / 'uploads'
+                        woo_exists = False
+                        if woo_uploads.exists():
+                            for _ in woo_uploads.glob('woocommerce_import_*.csv'):
+                                woo_exists = True
+                                break
+
+                        if woo_exists:
+                            # run compare_scans auto mode to produce manifests
+                            import trackers.compare_scans as cs
+                            scan_path = cs.find_latest_scan(str(RUNTIME_REPORTS_DIR))
+                            woo_path = cs.find_latest_woo_file(str(woo_uploads))
+                            # output into today's dated reports folder
+                            from datetime import datetime
+                            dt = datetime.now().strftime('%Y%m%d_%H%M%S')
+                            dated_dir = get_dated_reports_dir(None)
+                            output_path = str(Path(dated_dir) / f"product_changes_{dt}.xlsx")
+                            links_path = None
+                            for d in [str(Path(get_file('extracted_products')).parent), str(RUNTIME_REPORTS_DIR)]:
+                                lp = cs.find_links_file(d)
+                                if lp:
+                                    links_path = lp
+                                    break
+                            if scan_path and woo_path:
+                                cs.compare(scan_path, woo_path, output_path, links_path)
+                        else:
+                            # run price tracker
+                            self.run_price_tracker()
+                    except Exception as e:
+                        self.logger.error(f"Error running tracker: {e}", exc_info=True)
+                else:
+                    result = step_func()
                 results[step_name] = result
                 
                 if result:
