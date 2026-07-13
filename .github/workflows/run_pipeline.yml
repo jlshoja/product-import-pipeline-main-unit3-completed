@@ -1,0 +1,24 @@
+name: Run Pipeline
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *' # daily at 02:00 UTC
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      AUTO_RESUME: '1'
+      PROCESS_TIMEOUT: '3600'
+      PROCESS_SUBPROCESS_RETRY: '1'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install requirements (if requirements.txt exists)
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Run pipeline
+        run: ./run_pipeline.sh
