@@ -177,7 +177,9 @@ def main():
 
     # Save output
     output_path = OUTPUTS_DIR / get_file('standardized_output')
-    df.fillna('', inplace=True)
+    # Avoid setting mixed dtypes in-place which can raise FutureWarning in pandas.
+    # Use a non-inplace fill to let pandas handle dtype changes safely.
+    df = df.fillna('')
 
     # Remove intermediate column not in original output
     if 'رنگ_های_پردازش_شده' in df.columns:
