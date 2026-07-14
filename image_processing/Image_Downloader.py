@@ -49,11 +49,22 @@ class AdvancedImageDownloader:
         if self.state.get('session_folder') and os.path.isdir(self.state['session_folder']):
             self.session_folder = self.state['session_folder']
         else:
-            session_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            self.session_folder = os.path.join(self.output_folder, session_name)
-            Path(self.session_folder).mkdir(parents=True, exist_ok=True)
-            self.state['session_folder'] = self.session_folder
-            self._save_state_raw()
+            # If resuming and there are existing session folders under output_folder,
+            # prefer the most recently modified session folder so resumed downloads go
+            # into the same folder rather than creating a new one.
+            parent = Path(self.output_folder)
+            existing_sessions = [p for p in parent.iterdir() if p.is_dir()]
+            if existing_sessions and os.environ.get('IMG_MODE') == 'resume':
+                latest = max(existing_sessions, key=lambda p: p.stat().st_mtime)
+                self.session_folder = str(latest)
+                self.state['session_folder'] = self.session_folder
+                self._save_state_raw()
+            else:
+                session_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                self.session_folder = os.path.join(self.output_folder, session_name)
+                Path(self.session_folder).mkdir(parents=True, exist_ok=True)
+                self.state['session_folder'] = self.session_folder
+                self._save_state_raw()
 
         self.setup_logging()
         self.logger.info(f"[FOLDER] Session folder: {self.session_folder}")
