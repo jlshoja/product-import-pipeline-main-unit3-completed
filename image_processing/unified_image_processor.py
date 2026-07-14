@@ -329,7 +329,7 @@ def get_dominant_color(image_path):
         return best_color
     
     except Exception as e:
-        print(f"⚠️  Error processing {image_path}: {e}")
+        print(f"Warning: Error processing {image_path}: {e}")
         return None
 
 # =============================================================================
@@ -347,7 +347,7 @@ def is_square_image(image_path):
             width, height = img.size
             return width == height
     except Exception as e:
-        print(f"❌ Error reading {image_path}: {e}")
+        print(f"Error reading {image_path}: {e}")
         return False
 
 def compress_image_webp(image_path, output_path, max_size_kb=100):
@@ -390,7 +390,7 @@ def compress_image_webp(image_path, output_path, max_size_kb=100):
             return final_size
             
     except Exception as e:
-        print(f"❌ Error converting to WebP {image_path}: {e}")
+        print(f"Error converting to WebP {image_path}: {e}")
         return None
 
 def extract_category_number(filename):
@@ -434,16 +434,19 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
     
     output_path.mkdir(parents=True, exist_ok=True)
     
-    # Find images
+    # Find images recursively in all subfolders
     image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'}
-    image_files = [f for f in input_path.iterdir() 
-                   if f.is_file() and f.suffix.lower() in image_extensions]
+    image_files = []
+    for root, _, files in os.walk(input_path):
+        for file in files:
+            if Path(file).suffix.lower() in image_extensions:
+                image_files.append(Path(root) / file)
     
     if not image_files:
-        print("❌ No images found!")
+        print("No images found!")
         return
     
-    print(f"📂 Found {len(image_files)} images\n")
+    print(f"Found {len(image_files)} images\n")
     
     # Group by category
     categories = defaultdict(list)
@@ -453,13 +456,13 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
         if category_num is not None:
             categories[category_num].append(img_file)
         else:
-            print(f"⚠️  File {img_file.name} without category number - skipped")
+            print(f"File {img_file.name} without category number - skipped")
     
     if not categories:
-        print("❌ No files with category number found!")
+        print("No files with category number found!")
         return
     
-    print(f"📊 Found {len(categories)} categories: {sorted(categories.keys())}\n")
+    print(f"Found {len(categories)} categories: {sorted(categories.keys())}\n")
     
     # Process each category
     total_processed = 0
@@ -470,7 +473,7 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
     for cat_idx, category_num in enumerate(sorted(categories.keys()), start=1):
         images = categories[category_num]
         print(f"{'='*60}")
-        print(f"🔄 Processing category {category_num} ({len(images)} images)")
+        print(f"Processing category {category_num} ({len(images)} images)")
         print(f"{'='*60}")
         
         # Separate square and non-square — image opened only once
@@ -487,11 +490,11 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
                     non_square_images.append(img_file)
         
             except Exception as e:
-                print(f"❌ Error reading {img_file.name}: {e}")
+                print(f"Error reading {img_file.name}: {e}")
                 non_square_images.append(img_file)
         
-        print(f"   🟦 Square images: {len(square_images)}")
-        print(f"   🟨 Non-square images: {len(non_square_images)}\n")
+        print(f"   Square images: {len(square_images)}")
+        print(f"   Non-square images: {len(non_square_images)}\n")
         
         # Combine: square images first, then non-square
         sorted_images = square_images + non_square_images
@@ -503,7 +506,7 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
             # Color detection
             color_name = None
             if detect_color:
-                print(f"   🎨 Detecting color for {img_file.name}...")
+                print(f"   Detecting color for {img_file.name}...")
                 dominant_color = get_dominant_color(img_file)
                 if dominant_color:
                     color_name = find_closest_color_name(dominant_color)
@@ -530,12 +533,12 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
             if final_size:
                 color_info = f" [{color_name}]" if color_name else ""
                 if original_size > size_limit:
-                    print(f"   {is_square} {img_file.name} → {new_name}{color_info}")
-                    print(f"       ({original_size:.1f}KB → {final_size:.1f}KB) ✅ Compressed\n")
+                    print(f"   {img_file.name} -> {new_name}{color_info}")
+                    print(f"       ({original_size:.1f}KB -> {final_size:.1f}KB) Compressed\n")
                     total_compressed += 1
                 else:
-                    print(f"   {is_square} {img_file.name} → {new_name}{color_info}")
-                    print(f"       ({final_size:.1f}KB) ✅ Converted\n")
+                    print(f"   {img_file.name} -> {new_name}{color_info}")
+                    print(f"       ({final_size:.1f}KB) Converted\n")
                 
                 # If this is the 'a' image
                 if letter == 'a':
@@ -543,25 +546,25 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
                     
                 total_processed += 1
             else:
-                print(f"   ❌ Error processing {img_file.name}\n")
+                print(f"   Error processing {img_file.name}\n")
                 continue
         
         # Overall progress after finishing this category's images
         progress_pct = (cat_idx / total_categories) * 100
-        print(f"   📈 Progress: {cat_idx}/{total_categories} categories completed ({progress_pct:.1f}%)")
+        print(f"   Progress: {cat_idx}/{total_categories} categories completed ({progress_pct:.1f}%)")
         
         print()
     
     # Final report
     print(f"{'='*60}")
-    print(f"✨ Processing complete!")
+    print(f"Processing complete!")
     print(f"{'='*60}")
-    print(f"📊 Total images processed: {total_processed}")
-    print(f"🗜️  Images compressed: {total_compressed}")
-    print(f"🌐 Output format: WebP")
+    print(f"Total images processed: {total_processed}")
+    print(f"Images compressed: {total_compressed}")
+    print(f"Output format: WebP")
     if detect_color:
-        print(f"🎨 Color in filename: Yes")
-    print(f"📁 Output folder: {output_path.absolute()}")
+        print(f"Color in filename: Yes")
+    print(f"Output folder: {output_path.absolute()}")
     print(f"{'='*60}\n")
     
     # Remove background from 'a' images
@@ -644,9 +647,9 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
 # MAIN
 # =============================================================================
 
-def find_latest_dated_subfolder(base_folder):
+def find_all_dated_subfolders(base_folder):
     """
-    Looks inside base_folder for dated subfolders and returns the most recent one.
+    Looks inside base_folder for all dated subfolders and returns them sorted by date.
     Main format: YYYY-MM-DD_HH-MM-SS  (example: 2026-06-10_23-19-37)
     Alternative formats: YYYY-MM-DD, YYYYMMDD
     """
@@ -674,33 +677,14 @@ def find_latest_dated_subfolder(base_folder):
                 except ValueError:
                     pass
 
-    if not dated_folders:
-        return None
-
     dated_folders.sort(key=lambda x: x[0])
-    return dated_folders[-1][1]
+    return [folder for (dt, folder) in dated_folders]
 
 def main():
     """Main function"""
     import argparse
     
-    parser = argparse.ArgumentParser(
-        description='🎨 Unified Image Processing System',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Example usage:
-  python unified_image_processor.py -i ./downloaded_images -o ./output
-  python unified_image_processor.py -i ./downloaded_images -o ./output -s 150 --no-color
-  python unified_image_processor.py -i ./downloaded_images -o ./output --remove-bg
-
-Features:
-  ✅ Priority to square images (1a is square, then non-square)
-  ✅ Automatic color detection and naming: 1a_black.webp
-  ✅ WebP conversion and compression
-  ✅ Background removal (optional)
-        """
-    )
-    
+    parser = argparse.ArgumentParser(description='Unified Image Processing System')
     parser.add_argument('-i', '--input', 
                         default='./downloaded_images',
                         help='Input folder containing images (default: ./downloaded_images)')
@@ -728,39 +712,44 @@ Features:
     
     args = parser.parse_args()
 
-    # ── Input: latest dated subfolder ──────────────────────────────────────
+    # ── Input: all dated subfolders ──────────────────────────────────────
     if not os.path.exists(args.input):
-        print(f"❌ Error: Folder '{args.input}' does not exist!")
+        print(f"Error: Folder '{args.input}' does not exist!")
         print(f"Please create the folder and place images in it.")
         return
 
-    latest_subfolder = find_latest_dated_subfolder(args.input)
-    if latest_subfolder is not None:
-        effective_input = str(latest_subfolder)
-        print(f"📅 Latest dated subfolder found: {latest_subfolder.name}")
+    all_subfolders = find_all_dated_subfolders(args.input)
+    if all_subfolders:
+        print(f"Found {len(all_subfolders)} dated subfolders:")
+        for folder in all_subfolders:
+            print(f"   - {folder.name}")
+        
+        # Use all subfolders for processing
+        effective_input = args.input
+        print(f"Processing images from all dated subfolders in '{args.input}'")
     else:
         # If no dated subfolder is found, use the base folder directly
         effective_input = args.input
-        print(f"⚠️  No dated subfolder found in '{args.input}' — reading directly from it.")
+        print(f"No dated subfolder found in '{args.input}' — reading directly from it.")
 
     # ── Output: subfolder dated with today's date ───────────────────────────
     from datetime import datetime
     today_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     effective_output = str(Path(args.output) / today_str)
 
-    print("🎨 Unified Image Processing System")
+    print("Unified Image Processing System")
     print(f"{'='*60}")
-    print(f"📁 Input base folder: {args.input}")
-    print(f"📁 Input folder used: {effective_input}")
-    print(f"📁 Output folder: {effective_output}")
-    print(f"📏 Main image (a) max size: {args.main_size} KB")
-    print(f"📏 Gallery images max size: {args.size} KB")
-    print(f"🌐 Output format: WebP")
-    print(f"🎨 Color detection: {'No' if args.no_color else 'Yes'}")
-    print(f"🟦 Square priority: Yes")
+    print(f"Input base folder: {args.input}")
+    print(f"Input folder used: {effective_input}")
+    print(f"Output folder: {effective_output}")
+    print(f"Main image (a) max size: {args.main_size} KB")
+    print(f"Gallery images max size: {args.size} KB")
+    print(f"Output format: WebP")
+    print(f"Color detection: {'No' if args.no_color else 'Yes'}")
+    print(f"Square priority: Yes")
     if args.remove_bg:
-        print(f"✂️  Remove background: Yes (only 'a' images)")
-        print(f"🎨 Background color: {args.bg_color.capitalize()}")
+        print(f"Remove background: Yes (only 'a' images)")
+        print(f"Background color: {args.bg_color.capitalize()}")
     print(f"{'='*60}\n")
     
     # Process images
@@ -774,7 +763,7 @@ Features:
         args.bg_color
     )
     
-    print("\n✅ Done!")
+    print("\nDone!")
 
 
 if __name__ == "__main__":
