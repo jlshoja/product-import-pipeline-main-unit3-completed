@@ -60,7 +60,7 @@ class ProductScraperApp:
         self.config.print_summary()
     
     @log_execution_time()
-    def run_link_scraper(self, input_file=get_file('archive_urls')):
+    def run_link_scraper(self, input_file=get_file('archive_urls'), resume=False):
         """Run Link Scraper"""
         self.logger.info("="*70)
         self.logger.info("[1]  Running Link Scraper")
@@ -74,8 +74,14 @@ class ProductScraperApp:
             
             # Set AUTO_MODE for link_scraper to use resume logic
             os.environ['AUTO_MODE'] = '1'
-            # Set AUTO_RESUME to enable resume if progress exists
-            os.environ['AUTO_RESUME'] = '1'
+            # FIX: Set AUTO_RESUME based on pipeline's resume decision, not hardcoded
+            # This ensures individual scrapers respect the user's interactive choice
+            # When pipeline decides NOT to resume (user chose 'n'), all scrapers should start fresh
+            # When pipeline decides to resume (user chose 'y' or AUTO_RESUME enabled), scrapers should continue
+            if resume:
+                os.environ['AUTO_RESUME'] = '1'
+            else:
+                os.environ['AUTO_RESUME'] = '0'
             
             # Run the scraper
             link_scraper_module.main()
@@ -111,12 +117,12 @@ class ProductScraperApp:
             return False
     
     @log_execution_time()
-    def run_spec_scraper(self, input_file=get_file('extracted_products')):
+    def run_spec_scraper(self, input_file=get_file('extracted_products'), resume=False):
         """Run Spec Scraper"""
         self.logger.info("="*70)
         self.logger.info("[2]  Running Spec Scraper")
         self.logger.info("="*70)
-
+        
         try:
             import scrapers.spec_scraper as spec_scraper_module
             from common.file_utils import file_exists_and_non_empty
@@ -348,6 +354,7 @@ class ProductScraperApp:
         prints an English warning if Gemini left any unknown colors/names
         unresolved during standardization.
         """
+        import os
         os.environ['AUTO_MODE'] = '1'
 
         self.logger.info("\n Starting AUTOMATIC pipeline execution...\n")
@@ -389,6 +396,25 @@ class ProductScraperApp:
         # If not resuming, start a fresh state
         if not resume:
             start_run()
+            
+            # CRITICAL FIX: Clear individual scraper progress files when starting fresh
+            # This ensures individual modules (like spec_scraper, link_scraper) start from scratch
+            # rather than continuing where they left off
+            individual_progress_files = []
+            
+            # Define paths to individual scraper progress files
+            individual_progress_files.extend([
+                "runtime/state/link_scraper_progress.json",
+                "runtime/state/scraper_progress.json",
+                "runtime/state/checkpoint.xlsx",
+            ])
+            
+            # Clear all individual progress files
+            for progress_file in individual_progress_files:
+                import os
+                if os.path.exists(progress_file):
+                    os.remove(progress_file)
+                    self.logger.info(f"  → Cleared individual scraper progress: {progress_file}")
         else:
             self.logger.info('Resuming previous pipeline run based on pipeline_state.json')
 
@@ -412,7 +438,7 @@ class ProductScraperApp:
                         output_file = str(INTERMEDIATE_DIR / get_file('extracted_links'))
                         legacy_output = str(INTERMEDIATE_DIR / get_file('extracted_products'))
                         step_valid = (file_exists_and_non_empty(output_file) or 
-                                    file_exists_and_non_empty(legacy_output))
+                                     file_exists_and_non_empty(legacy_output))
                         if not step_valid:
                             self.logger.warning(f"  {step_name} marked as done but output file missing - will re-run")
                     
@@ -426,7 +452,13 @@ class ProductScraperApp:
             step_succeeded = False
             while retry_count <= max_retries:
                 try:
-                    result = step_func()
+                    # Pass the resume parameter to scraper functions so they can set environment variables correctly
+                    if step_name == "Link Scraper":
+                        result = step_func(resume=resume)
+                    elif step_name == "Spec Scraper":
+                        result = step_func(resume=resume)
+                    else:
+                        result = step_func()
 
                     # Standardizer returns a dict with unresolved counts
                     if step_name == "Standardizer" and isinstance(result, dict):
