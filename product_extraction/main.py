@@ -129,6 +129,12 @@ class ProductScraperApp:
                 self.logger.error(f"Spec Scraper cannot run: missing input file {links_file}")
                 return False
 
+            # Set AUTO_RESUME if we're in pipeline resume mode
+            # This allows spec_scraper to resume from where it left off
+            pipeline_resume = os.getenv('AUTO_RESUME', '').strip().lower() in ('1', 'true', 'yes')
+            if pipeline_resume:
+                os.environ['AUTO_RESUME'] = '1'
+
             # Run the scraper
             spec_scraper_module.main()
 
