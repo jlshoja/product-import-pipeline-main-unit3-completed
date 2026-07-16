@@ -98,8 +98,14 @@ class ProductScraperApp:
             )
             return False
 
+        # Read as a table to confirm at least one data row. Pick the reader by
+        # extension so .csv outputs (e.g. the standardizer's product.csv) are
+        # validated the same way as .xlsx scraper outputs.
         try:
-            df = pd.read_excel(output_path)
+            if str(output_path).lower().endswith('.csv'):
+                df = pd.read_csv(output_path, encoding='utf-8-sig')
+            else:
+                df = pd.read_excel(output_path)
         except Exception as e:
             self.logger.error(f"{stage_name} output could not be read as a table: {e}")
             return False
@@ -264,8 +270,21 @@ class ProductScraperApp:
             if not self._upstream_output_ready("Spec Scraper", input_file):
                 return False
 
+            # Capture the standardizer's output (product.csv) mtime before running
+            # so we can prove this run produced it and record it for downstream
+            # stages (Import Builder) to verify currency against.
+            output_path = str(OUTPUTS_DIR / get_file('standardized_output'))
+            mtime_before = self._file_mtime(output_path)
+
             result = standardizer.main()
 
+            # Validate the standardizer actually wrote a fresh, non-empty CSV this
+            # run. If it silently produced nothing (or only a stale file remains),
+            # do not report success — Import Builder must not consume stale data.
+            if not self._validate_fresh_output(output_path, mtime_before, "Standardizer"):
+                return False
+
+            record_step_output("Standardizer", output_path)
             self.logger.info(" Standardizer completed successfully")
             return result
 
@@ -286,6 +305,15 @@ class ProductScraperApp:
                 sys.path.insert(0, import_builder_dir)
 
             from runner import main as import_builder_main
+            from common.path_registry import OUTPUTS_DIR
+
+            # Dependency gate: Import Builder consumes the Standardizer's output
+            # (product.csv in OUTPUTS_DIR, per import_builder/runner.py). Require
+            # it to belong to the current run so a stale CSV from a prior run is
+            # not turned into a WooCommerce import.
+            standardized_input = str(OUTPUTS_DIR / get_file('standardized_output'))
+            if not self._upstream_output_ready("Standardizer", standardized_input):
+                return False
 
             # If manifests exist, set env vars so import_builder splits new/update CSVs
             try:
@@ -331,16 +359,20 @@ class ProductScraperApp:
         self.logger.info("[IMG] Running Image Processing (download + process)")
         self.logger.info("="*70)
 
+        from common.path_registry import INTERMEDIATE_DIR
+
         image_dir = ROOT_DIR / "image_processing"
         data_outputs = ROOT_DIR / "data" / "outputs"
 
-        # Paths mirror image_processing/menu.py defaults
-        excel_file        = str(ROOT_DIR / "data" / "intermediate" / "extracted_products.xlsx")
+        # Image download reads product URLs from the Link Scraper's output. Use
+        # the registered filename (extracted_links.xlsx) rather than a hardcoded
+        # 'extracted_products.xlsx' — the latter was a different, stale physical
+        # file on disk. Gate it so a stale leftover from a prior run is refused.
+        excel_file        = str(INTERMEDIATE_DIR / get_file('extracted_links'))
         downloaded_folder = str(data_outputs / "downloaded_images")
         output_folder     = str(data_outputs / "processed_images")
 
-        if not Path(excel_file).exists():
-            self.logger.error(f"Image input not found: {excel_file}")
+        if not self._upstream_output_ready("Link Scraper", excel_file):
             return False
 
         # --- Sub-step 1: download images (fresh, full, no prompts) ---

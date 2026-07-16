@@ -245,3 +245,61 @@ def test_link_scraper_accepts_freshly_written_output(app, state_file, tmp_interm
     assert app.run_link_scraper(resume=False) is True
     # And the output was recorded against the current run.
     assert ps.step_output_is_current("Link Scraper", str(out)) is True
+
+
+# ─────────────────────────────────────────────────────────────
+# Downstream stages: CSV validation + run-scoped input gating
+# (Standardizer, Import Builder, Image Processing)
+# ─────────────────────────────────────────────────────────────
+
+def _csv_with_rows(path, rows=1):
+    """Write a real .csv with `rows` data rows and a sku column."""
+    import pandas as pd
+    df = pd.DataFrame({"sku": [f"SKU{i}" for i in range(rows)]})
+    df.to_csv(str(path), index=False, encoding="utf-8-sig")
+    return str(path)
+
+
+def test_validate_fresh_output_accepts_csv(app, tmp_path):
+    """A freshly written non-empty CSV validates (reader picked by extension)."""
+    out = tmp_path / "product.csv"
+    _csv_with_rows(out, rows=2)
+    assert app._validate_fresh_output(str(out), mtime_before=None, stage_name="Standardizer") is True
+
+
+def test_validate_fresh_output_rejects_empty_csv(app, tmp_path):
+    import pandas as pd
+    out = tmp_path / "product.csv"
+    pd.DataFrame({"sku": []}).to_csv(str(out), index=False, encoding="utf-8-sig")
+    assert app._validate_fresh_output(str(out), mtime_before=None, stage_name="Standardizer") is False
+
+
+def test_import_builder_dependency_gate_rejects_stale_standardizer(app, state_file, tmp_path, monkeypatch):
+    """Import Builder must refuse a product.csv left over from a previous run."""
+    from common.path_registry import OUTPUTS_DIR
+    csv_path = str(OUTPUTS_DIR / get_file_name('standardized_output'))
+
+    # Standardizer recorded product.csv under a previous run (RUN_A).
+    _csv_with_rows(tmp_path / "product.csv")
+    ps.start_run(run_id="RUN_A")
+    # Record with a real temp file so identity is exact, then point the gate at it.
+    ps.record_step_output("Standardizer", str(tmp_path / "product.csv"))
+
+    # A new run begins; the recorded output is now from a stale run.
+    ps.start_run(run_id="RUN_B")
+    # The gate checks OUTPUTS_DIR/product.csv, which has no current record -> reject.
+    assert app._upstream_output_ready("Standardizer", csv_path) is False
+
+
+def test_image_processing_gate_rejects_stale_link_output(app, state_file, tmp_path, monkeypatch):
+    """Image Processing must refuse a Link Scraper output not from the current run."""
+    from common.path_registry import INTERMEDIATE_DIR
+    links = str(INTERMEDIATE_DIR / get_file_name('extracted_links'))
+
+    ps.start_run(run_id="RUN_A")
+    _xlsx_with_rows(tmp_path / "extracted_links.xlsx")
+    ps.record_step_output("Link Scraper", str(tmp_path / "extracted_links.xlsx"))
+
+    ps.start_run(run_id="RUN_B")
+    # No current record for the real INTERMEDIATE_DIR path -> gate rejects.
+    assert app._upstream_output_ready("Link Scraper", links) is False
