@@ -153,3 +153,4 @@ runtime/reports
 # Runtime state
 # ==========================================
 product_extraction/runtime/state/   
+product_extraction/runtime/state/pipeline_state.json
