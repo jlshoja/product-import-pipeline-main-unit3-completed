@@ -1314,16 +1314,44 @@ def main():
     all_products = []
     retry_urls = retry_numbers = retry_names = None
 
-    # Automatic mode: never prompt. Always start from scratch (full scan) so a
-    # previous run's partial state can't silently change behaviour.
+    # Automatic mode: never prompt. But support resume if AUTO_RESUME is set.
     auto_mode = os.getenv('AUTO_MODE') == '1'
+    # CRITICAL FIX: When pipeline runs in 'no-resume' mode, AUTO_RESUME should be false
+    # This allows spec_scraper to properly handle user choices in run_auto_pipeline()
+    # The behavior is now controlled by run_auto_pipeline's 'resume' variable
+    if os.getenv('AUTO_RESUME') is None:
+        # AUTO_RESUME not explicitly set by pipeline - use default behavior
+        auto_resume = False  # Don't auto-resume unless explicitly enabled
+    else:
+        auto_resume = os.getenv('AUTO_RESUME') == '1'
 
     if auto_mode and (has_results or has_failed):
-        all_products      = []
-        completed_numbers = set()
-        clear_progress()
-        print("\n[AUTO] Automatic mode - starting fresh (full scan), no prompts")
-        sys.stdout.flush()
+        if auto_resume and has_results:
+            # Auto resume: continue from where we left off
+            all_products = existing_results.to_dict('records') if has_results else []
+            for p in all_products:
+                try:
+                    p['شماره'] = int(p['شماره'])
+                except (ValueError, TypeError):
+                    pass
+            completed_numbers = set()
+            if 'شماره' in existing_results.columns:
+                for _, row in existing_results.iterrows():
+                    st = str(row.get('وضعیت', 'OK'))
+                    if st in ('OK', 'OUT_OF_STOCK'):
+                        try:
+                            completed_numbers.add(int(row['شماره']))
+                        except (ValueError, TypeError):
+                            pass
+            print(f"\n[AUTO] Automatic mode with resume - skipping {len(completed_numbers)} already processed")
+            sys.stdout.flush()
+        else:
+            # Auto mode without resume: start fresh
+            all_products      = []
+            completed_numbers = set()
+            clear_progress()
+            print("\n[AUTO] Automatic mode - starting fresh (full scan), no prompts")
+            sys.stdout.flush()
     elif has_results or has_failed:
         print(f"\n{'='*70}")
         print("📊 Previous run status:")

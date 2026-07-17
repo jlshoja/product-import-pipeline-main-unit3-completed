@@ -145,3 +145,12 @@ baseline/sample_output/woocommerce_import_*.csv
 # Runtime reports
 # ==========================================
 runtime/reports
+
+# ==========================================
+.agents/skills/graphify/
+.claude/skills/graphify/
+
+# Runtime state
+# ==========================================
+product_extraction/runtime/state/   
+product_extraction/runtime/state/pipeline_state.json

@@ -21,7 +21,10 @@ from common.path_registry import RUNTIME_CACHE_DIR, RUNTIME_REPORTS_DIR, get_dat
 from common.file_utils import find_latest_dated
 from config import get_config
 from utils.logger import LoggerSetup, log_execution_time
-from common.pipeline_state import read_state, start_run, update_step, mark_complete
+from common.pipeline_state import (
+    read_state, start_run, update_step, mark_complete,
+    record_step_output, step_output_is_current,
+)
 
 
 class ProductScraperApp:
@@ -59,8 +62,106 @@ class ProductScraperApp:
         
         self.config.print_summary()
     
+    @staticmethod
+    def _file_mtime(path):
+        """Return a file's mtime, or None if it does not exist."""
+        try:
+            return Path(path).stat().st_mtime
+        except OSError:
+            return None
+
+    def _validate_fresh_output(self, output_path, mtime_before, stage_name):
+        """Validate that `stage_name` produced a fresh, non-empty output this run.
+
+        Requires all of:
+        - the file exists and is non-empty,
+        - it reads as a table with at least one row,
+        - its mtime advanced past `mtime_before` (proving THIS run wrote it,
+          not a stale leftover from a previous run).
+
+        Returns True only when every check passes; logs the specific failure
+        otherwise.
+        """
+        from common.file_utils import file_exists_and_non_empty
+        import pandas as pd
+
+        if not file_exists_and_non_empty(output_path):
+            self.logger.error(f"{stage_name} produced no output: {output_path}")
+            return False
+
+        mtime_after = self._file_mtime(output_path)
+        if mtime_before is not None and mtime_after is not None and mtime_after <= mtime_before:
+            self.logger.error(
+                f"{stage_name} did not write a fresh output — the file on disk is "
+                f"stale (unchanged since before this run). Refusing to treat stale "
+                f"data as success: {output_path}"
+            )
+            return False
+
+        # Read as a table to confirm at least one data row. Pick the reader by
+        # extension so .csv outputs (e.g. the standardizer's product.csv) are
+        # validated the same way as .xlsx scraper outputs.
+        try:
+            if str(output_path).lower().endswith('.csv'):
+                df = pd.read_csv(output_path, encoding='utf-8-sig')
+            else:
+                df = pd.read_excel(output_path)
+        except Exception as e:
+            self.logger.error(f"{stage_name} output could not be read as a table: {e}")
+            return False
+
+        if df.empty or len(df) == 0:
+            self.logger.error(f"{stage_name} extracted zero rows")
+            return False
+
+        return True
+
+    def _upstream_output_ready(self, upstream_step, path):
+        """Return True if a downstream stage may safely consume `path`.
+
+        Enforces the dependency gate: a stage must not run on an upstream's
+        output unless that output belongs to the current run. When a tracked run
+        recorded an output for `upstream_step`, we require it to be current
+        (matching run_id + on-disk size/mtime) — this rejects stale leftovers.
+
+        When there is no tracked run or the upstream recorded no output (e.g. the
+        scrapers invoked standalone, outside run_auto_pipeline), we fall back to
+        a plain non-empty file check so standalone use is not broken.
+        """
+        from common.file_utils import file_exists_and_non_empty
+
+        state = read_state()
+        # A run is "active" (tracked) whenever a pipeline run is currently
+        # running. Inside an active run the dependency is strict: the upstream's
+        # output must be current (recorded this run + unchanged on disk). A
+        # missing record means the upstream did NOT complete in this run, so a
+        # leftover file on disk is stale and must be rejected.
+        #
+        # We key off 'running' specifically (not 'failed'): in the auto pipeline a
+        # downstream stage only runs while the run is 'running' (a failure breaks
+        # the loop before downstream runs), and a stale 'failed' state left by a
+        # prior run must not make an unrelated later invocation reject valid input.
+        run_active = bool(state) and state.get('status') == 'running'
+        if run_active:
+            if not step_output_is_current(upstream_step, path):
+                self.logger.error(
+                    f"Refusing to run: {upstream_step} did not produce a current "
+                    f"output at {path} in this run (missing or stale). Upstream must "
+                    f"complete successfully in this run first."
+                )
+                return False
+            return True
+
+        # No active tracked run (e.g. a scraper invoked standalone, outside
+        # run_auto_pipeline): fall back to a plain non-empty file check so
+        # standalone use is not broken.
+        if not file_exists_and_non_empty(path):
+            self.logger.error(f"Required input missing or empty: {path}")
+            return False
+        return True
+
     @log_execution_time()
-    def run_link_scraper(self, input_file=get_file('archive_urls')):
+    def run_link_scraper(self, input_file=get_file('archive_urls'), resume=False):
         """Run Link Scraper"""
         self.logger.info("="*70)
         self.logger.info("[1]  Running Link Scraper")
@@ -68,41 +169,37 @@ class ProductScraperApp:
         
         try:
             import scrapers.link_scraper as link_scraper_module
-            from common.file_utils import file_exists_and_non_empty
             from common.path_registry import INTERMEDIATE_DIR
             import os
-            
-            # Set AUTO_MODE for link_scraper to use resume logic
-            os.environ['AUTO_MODE'] = '1'
-            # Set AUTO_RESUME to enable resume if progress exists
-            os.environ['AUTO_RESUME'] = '1'
-            
-            # Run the scraper
-            link_scraper_module.main()
-            
-            # Validate output - check both possible filenames
+
             output_file = get_file('extracted_links')
             output_path = str(INTERMEDIATE_DIR / output_file)
-            
-            # Also check for extracted_products.xlsx (legacy name)
-            legacy_output = str(INTERMEDIATE_DIR / get_file('extracted_products'))
-            
-            # Check if either output file exists and is non-empty
-            if not file_exists_and_non_empty(output_path):
-                if not file_exists_and_non_empty(legacy_output):
-                    self.logger.error(f"Link Scraper produced no output: {output_file}")
-                    return False
-                else:
-                    # Legacy file exists, use it
-                    output_path = legacy_output
-            
-            # Read the output file to check if any products were extracted
-            import pandas as pd
-            df = pd.read_excel(output_path)
-            if df.empty or len(df) == 0:
-                self.logger.error("Link Scraper extracted zero products")
+
+            # Capture the output file's mtime BEFORE running. A stale file from a
+            # previous run may already exist on disk. We only accept the run as
+            # successful if this run actually (re)wrote the file, proven by the
+            # mtime advancing. This prevents a swallowed-exception failure from
+            # passing validation on stale data.
+            mtime_before = self._file_mtime(output_path)
+
+            # Set AUTO_MODE for link_scraper to use resume logic
+            os.environ['AUTO_MODE'] = '1'
+            # Set AUTO_RESUME based on the caller's resume decision. The pipeline
+            # forces resume=True on retry attempts so a mid-stage failure resumes
+            # from checkpoint instead of wiping completed work.
+            os.environ['AUTO_RESUME'] = '1' if resume else '0'
+
+            # Run the scraper
+            link_scraper_module.main()
+
+            # Content + freshness validation: the file must exist, contain at
+            # least one product row, AND have been written by this run.
+            if not self._validate_fresh_output(output_path, mtime_before, "Link Scraper"):
                 return False
-            
+
+            # Record the produced output against the current run_id so downstream
+            # stages can verify they are consuming this run's output, not a stale one.
+            record_step_output("Link Scraper", output_path)
             self.logger.info(" Link Scraper completed successfully")
             return True
                 
@@ -111,33 +208,43 @@ class ProductScraperApp:
             return False
     
     @log_execution_time()
-    def run_spec_scraper(self, input_file=get_file('extracted_products')):
+    def run_spec_scraper(self, input_file=get_file('extracted_products'), resume=False):
         """Run Spec Scraper"""
         self.logger.info("="*70)
         self.logger.info("[2]  Running Spec Scraper")
         self.logger.info("="*70)
-
+        
         try:
             import scrapers.spec_scraper as spec_scraper_module
-            from common.file_utils import file_exists_and_non_empty
-            from common.path_registry import INTERMEDIATE_DIR
+            from common.path_registry import INTERMEDIATE_DIR, OUTPUTS_DIR
 
-            # Validate input: extracted_links is REQUIRED
+            # Dependency gate: the Link Scraper's output (extracted_links) is a
+            # REQUIRED input. It must belong to the current run — a stale file
+            # from a previous, failed run must not be consumed.
             links_filename = get_file('extracted_links')
             links_file = str(INTERMEDIATE_DIR / links_filename)
-            if not file_exists_and_non_empty(links_file):
-                self.logger.error(f"Spec Scraper cannot run: missing input file {links_file}")
+            if not self._upstream_output_ready("Link Scraper", links_file):
                 return False
+
+            # spec_scraper writes product_details to OUTPUTS_DIR. Capture its
+            # mtime before running so we can prove this run (re)wrote it.
+            output_path = str(OUTPUTS_DIR / get_file('product_details'))
+            mtime_before = self._file_mtime(output_path)
+
+            # Drive resume/fresh explicitly. The pipeline forces resume=True on
+            # retry attempts so a mid-stage failure resumes from checkpoint
+            # instead of restarting the full scan.
+            os.environ['AUTO_MODE'] = '1'
+            os.environ['AUTO_RESUME'] = '1' if resume else '0'
 
             # Run the scraper
             spec_scraper_module.main()
 
-            # Validate output
-            output_file = get_file('extracted_products')
-            if not file_exists_and_non_empty(output_file):
-                self.logger.error(f"Spec Scraper produced no output: {output_file}")
+            # Content + freshness validation on the real output file.
+            if not self._validate_fresh_output(output_path, mtime_before, "Spec Scraper"):
                 return False
 
+            record_step_output("Spec Scraper", output_path)
             self.logger.info(" Spec Scraper completed successfully")
             return True
 
@@ -154,16 +261,30 @@ class ProductScraperApp:
 
         try:
             import standardizer
-            from common.file_utils import file_exists_and_non_empty
+            from common.path_registry import OUTPUTS_DIR
 
-            # Validate input
-            input_file = get_file('extracted_products')
-            if not file_exists_and_non_empty(input_file):
-                self.logger.error(f"Standardizer missing input: {input_file}")
+            # Dependency gate: the standardizer consumes the Spec Scraper's output
+            # (product_details in OUTPUTS_DIR, per standardizer/runner.py). Require
+            # it to belong to the current run so a stale file cannot be consumed.
+            input_file = str(OUTPUTS_DIR / get_file('product_details'))
+            if not self._upstream_output_ready("Spec Scraper", input_file):
                 return False
+
+            # Capture the standardizer's output (product.csv) mtime before running
+            # so we can prove this run produced it and record it for downstream
+            # stages (Import Builder) to verify currency against.
+            output_path = str(OUTPUTS_DIR / get_file('standardized_output'))
+            mtime_before = self._file_mtime(output_path)
 
             result = standardizer.main()
 
+            # Validate the standardizer actually wrote a fresh, non-empty CSV this
+            # run. If it silently produced nothing (or only a stale file remains),
+            # do not report success — Import Builder must not consume stale data.
+            if not self._validate_fresh_output(output_path, mtime_before, "Standardizer"):
+                return False
+
+            record_step_output("Standardizer", output_path)
             self.logger.info(" Standardizer completed successfully")
             return result
 
@@ -184,6 +305,15 @@ class ProductScraperApp:
                 sys.path.insert(0, import_builder_dir)
 
             from runner import main as import_builder_main
+            from common.path_registry import OUTPUTS_DIR
+
+            # Dependency gate: Import Builder consumes the Standardizer's output
+            # (product.csv in OUTPUTS_DIR, per import_builder/runner.py). Require
+            # it to belong to the current run so a stale CSV from a prior run is
+            # not turned into a WooCommerce import.
+            standardized_input = str(OUTPUTS_DIR / get_file('standardized_output'))
+            if not self._upstream_output_ready("Standardizer", standardized_input):
+                return False
 
             # If manifests exist, set env vars so import_builder splits new/update CSVs
             try:
@@ -229,16 +359,20 @@ class ProductScraperApp:
         self.logger.info("[IMG] Running Image Processing (download + process)")
         self.logger.info("="*70)
 
+        from common.path_registry import INTERMEDIATE_DIR
+
         image_dir = ROOT_DIR / "image_processing"
         data_outputs = ROOT_DIR / "data" / "outputs"
 
-        # Paths mirror image_processing/menu.py defaults
-        excel_file        = str(ROOT_DIR / "data" / "intermediate" / "extracted_products.xlsx")
+        # Image download reads product URLs from the Link Scraper's output. Use
+        # the registered filename (extracted_links.xlsx) rather than a hardcoded
+        # 'extracted_products.xlsx' — the latter was a different, stale physical
+        # file on disk. Gate it so a stale leftover from a prior run is refused.
+        excel_file        = str(INTERMEDIATE_DIR / get_file('extracted_links'))
         downloaded_folder = str(data_outputs / "downloaded_images")
         output_folder     = str(data_outputs / "processed_images")
 
-        if not Path(excel_file).exists():
-            self.logger.error(f"Image input not found: {excel_file}")
+        if not self._upstream_output_ready("Link Scraper", excel_file):
             return False
 
         # --- Sub-step 1: download images (fresh, full, no prompts) ---
@@ -342,10 +476,8 @@ class ProductScraperApp:
         prints an English warning if Gemini left any unknown colors/names
         unresolved during standardization.
         """
+        import os
         os.environ['AUTO_MODE'] = '1'
-        # Set AUTO_RESUME for the entire pipeline if we're in resume mode
-        if resume:
-            os.environ['AUTO_RESUME'] = '1'
 
         self.logger.info("\n Starting AUTOMATIC pipeline execution...\n")
 
@@ -383,18 +515,26 @@ class ProductScraperApp:
                 except Exception:
                     resume = False
 
-        # If not resuming, start a fresh pipeline run
+        # If not resuming, start a fresh state
         if not resume:
-            # Clear existing pipeline state and start fresh
-            from common.pipeline_state import write_state
-            write_state({
-                'run_id': datetime.now().strftime('%Y%m%d_%H%M%S'),
-                'start_time': datetime.utcnow().isoformat(),
-                'steps': {},
-                'last_step': None,
-                'status': 'running'
-            })
-            self.logger.info('Starting fresh pipeline run (cleared previous state)')
+            start_run()
+
+            # Clear individual scraper progress files when starting fresh so
+            # each scraper begins from scratch rather than resuming a prior run.
+            # Paths are resolved against RUNTIME_STATE_DIR (absolute) — using
+            # cwd-relative paths silently failed to clear anything when the
+            # pipeline was launched from outside the project root (e.g. a .bat).
+            from common.path_registry import RUNTIME_STATE_DIR
+            individual_progress_files = [
+                RUNTIME_STATE_DIR / get_file('link_scraper_progress'),
+                RUNTIME_STATE_DIR / get_file('scraper_progress'),
+                RUNTIME_STATE_DIR / get_file('checkpoint'),
+            ]
+
+            for progress_file in individual_progress_files:
+                if progress_file.exists():
+                    progress_file.unlink()
+                    self.logger.info(f"  → Cleared individual scraper progress: {progress_file}")
         else:
             self.logger.info('Resuming previous pipeline run based on pipeline_state.json')
 
@@ -405,25 +545,37 @@ class ProductScraperApp:
             self.logger.info(f"  {step_name}")
             self.logger.info(f"{'='*70}")
 
-            # If resuming and this step already done, skip it
-            # But first validate that the step's output actually exists
+            # If resuming and this step already completed in THIS run, skip it —
+            # but only if its recorded output is still current (belongs to this
+            # run and is unchanged on disk). A step marked 'done' whose output is
+            # missing or stale is re-run rather than trusted.
             if resume:
                 s = existing.get('steps', {}).get(step_name, {})
                 if s.get('status') == 'done':
-                    # Validate that the step actually completed successfully
-                    step_valid = True
-                    if step_name == "Link Scraper":
-                        from common.file_utils import file_exists_and_non_empty
-                        from common.path_registry import INTERMEDIATE_DIR
-                        output_file = str(INTERMEDIATE_DIR / get_file('extracted_links'))
-                        legacy_output = str(INTERMEDIATE_DIR / get_file('extracted_products'))
-                        step_valid = (file_exists_and_non_empty(output_file) or 
-                                    file_exists_and_non_empty(legacy_output))
+                    recorded = (s.get('info') or {}).get('output')
+                    if recorded and recorded.get('path'):
+                        step_valid = step_output_is_current(step_name, recorded['path'])
                         if not step_valid:
-                            self.logger.warning(f"  {step_name} marked as done but output file missing - will re-run")
-                    
+                            self.logger.warning(
+                                f"  {step_name} marked done but its output is stale/missing "
+                                f"- will re-run"
+                            )
+                    else:
+                        # No recorded output (older state format): fall back to a
+                        # plain existence check for the known-output stages.
+                        step_valid = True
+                        if step_name == "Link Scraper":
+                            from common.file_utils import file_exists_and_non_empty
+                            from common.path_registry import INTERMEDIATE_DIR
+                            output_file = str(INTERMEDIATE_DIR / get_file('extracted_links'))
+                            step_valid = file_exists_and_non_empty(output_file)
+                            if not step_valid:
+                                self.logger.warning(
+                                    f"  {step_name} marked as done but output file missing - will re-run"
+                                )
+
                     if step_valid:
-                        self.logger.info(f" Skipping {step_name} (already done in previous run)")
+                        self.logger.info(f" Skipping {step_name} (already done in this run)")
                         results[step_name] = True
                         continue
 
@@ -432,7 +584,16 @@ class ProductScraperApp:
             step_succeeded = False
             while retry_count <= max_retries:
                 try:
-                    result = step_func()
+                    # Resume decision for scraper stages:
+                    # - First attempt uses the pipeline-level resume flag.
+                    # - Every RETRY forces resume=True so a mid-stage failure
+                    #   continues from checkpoint instead of restarting fresh
+                    #   (which would delete the progress of already-completed items).
+                    if step_name in ("Link Scraper", "Spec Scraper"):
+                        step_resume = resume or retry_count > 0
+                        result = step_func(resume=step_resume)
+                    else:
+                        result = step_func()
 
                     # Standardizer returns a dict with unresolved counts
                     if step_name == "Standardizer" and isinstance(result, dict):
@@ -506,6 +667,11 @@ class ProductScraperApp:
 
         all_success = len(results) == len(steps) and all(results.values())
         if all_success:
+            # Mark the run complete so the next invocation starts a genuinely
+            # fresh run instead of re-prompting to resume a "running" run that
+            # actually finished. (mark_complete was previously never called, so
+            # status was stuck at 'running' forever.)
+            mark_complete()
             self.logger.info(" Automatic pipeline completed successfully!")
         else:
             self.logger.warning("  Automatic pipeline did not complete all steps")
