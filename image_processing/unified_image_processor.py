@@ -444,7 +444,7 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
     
     if not image_files:
         print("No images found!")
-        return
+        return 0
     
     print(f"Found {len(image_files)} images\n")
     
@@ -460,7 +460,7 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
     
     if not categories:
         print("No files with category number found!")
-        return
+        return 0
     
     print(f"Found {len(categories)} categories: {sorted(categories.keys())}\n")
     
@@ -643,6 +643,11 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
             print(f"\n[WARNING] rembg library not installed!")
             print(f"To install: pip install \"rembg[cpu]\"\n")
 
+    # Return how many images were successfully processed so the caller can tell
+    # a real, complete run apart from an empty/interrupted one and decide whether
+    # to write the completion marker.
+    return total_processed
+
 # =============================================================================
 # MAIN
 # =============================================================================
@@ -753,7 +758,7 @@ def main():
     print(f"{'='*60}\n")
     
     # Process images
-    process_images_unified(
+    total_processed = process_images_unified(
         effective_input,
         effective_output,
         args.size,
@@ -762,7 +767,25 @@ def main():
         not args.no_color,
         args.bg_color
     )
-    
+
+    # Write a completion marker ONLY when processing genuinely produced output.
+    # A partial/interrupted run (timeout, crash) never reaches this point, so it
+    # leaves a dated output folder WITHOUT the marker. Downstream stages
+    # (import_builder) use the marker to distinguish complete folders from
+    # interrupted leftovers and refuse to build on a partial one.
+    if total_processed and total_processed > 0:
+        try:
+            marker = Path(effective_output) / '.processing_complete'
+            marker.write_text(
+                f"processed={total_processed}\n",
+                encoding='utf-8',
+            )
+            print(f"Completion marker written: {marker}")
+        except Exception as e:
+            print(f"Warning: could not write completion marker: {e}")
+    else:
+        print("No images were processed - completion marker NOT written.")
+
     print("\nDone!")
 
 
