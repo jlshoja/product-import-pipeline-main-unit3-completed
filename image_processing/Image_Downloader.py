@@ -566,14 +566,19 @@ class AdvancedImageDownloader:
         return existing
 
     def _build_sku_map(self, df):
-        if 'Product URL' in df.columns and 'Product Name' in df.columns:
+        # Prefer an explicit 'sku' column (present when driven by a manifest) so
+        # incremental runs name files by the real SKU rather than a page index.
+        has_sku_col = 'sku' in df.columns
+        has_name = 'Product Name' in df.columns
+        if has_sku_col or ('Product URL' in df.columns and has_name):
             for idx, row in df.iterrows():
                 page_num = idx + 1
-                sku = self.extract_sku(str(row['Product Name']))
-                if sku:
-                    self.sku_map[page_num] = sku
-                else:
-                    self.sku_map[page_num] = str(page_num)
+                sku = ''
+                if has_sku_col:
+                    sku = str(row['sku']).strip()
+                if not sku and has_name:
+                    sku = self.extract_sku(str(row['Product Name'])) or ''
+                self.sku_map[page_num] = sku if sku else str(page_num)
         else:
             for i in range(1, len(df) + 1):
                 self.sku_map[i] = str(i)
@@ -623,17 +628,35 @@ class AdvancedImageDownloader:
         manifest_path = os.environ.get('IMG_MANIFEST')
         if manifest_path:
             try:
-                df_manifest = pd.read_csv(manifest_path, encoding='utf-8-sig')
-                # Expect columns: sku, url, name (url preferred)
+                df_manifest = pd.read_csv(manifest_path, encoding='utf-8-sig', dtype=str)
+                # Expect columns: sku, url (url preferred). CRITICAL: carry the
+                # sku column through so downloaded files are named {sku}{letter}
+                # (e.g. 9266a.jpg). Without it, _build_sku_map falls back to
+                # sequential page numbers (1a, 2a…) and every downstream
+                # SKU→image lookup silently breaks.
                 if 'url' in df_manifest.columns:
-                    urls = df_manifest['url'].tolist()
+                    url_series = df_manifest['url']
                 elif 'Product URL' in df_manifest.columns:
-                    urls = df_manifest['Product URL'].tolist()
+                    url_series = df_manifest['Product URL']
                 else:
-                    urls = []
-                # Build a minimal dataframe for compatibility
-                df = pd.DataFrame({'Product URL': urls})
-                self.logger.info(f"[MANIFEST] Processing {len(df)} products from manifest: {manifest_path}")
+                    url_series = pd.Series([], dtype=str)
+
+                data = {'Product URL': url_series.fillna('').tolist()}
+                if 'sku' in df_manifest.columns:
+                    data['sku'] = df_manifest['sku'].fillna('').astype(str).tolist()
+                # Provide a Product Name so alt/name-based paths still work and
+                # _build_sku_map has a fallback source for the code.
+                if 'name' in df_manifest.columns:
+                    data['Product Name'] = df_manifest['name'].fillna('').tolist()
+                elif 'sku' in df_manifest.columns:
+                    data['Product Name'] = [f"کد {s}" for s in data['sku']]
+
+                df = pd.DataFrame(data)
+                # Drop rows without a usable URL — they cannot be downloaded.
+                df = df[df['Product URL'].astype(str).str.strip() != ''].reset_index(drop=True)
+                self.logger.info(
+                    f"[MANIFEST] Processing {len(df)} products from manifest: {manifest_path}"
+                )
             except Exception as e:
                 self.logger.error(f"[MANIFEST] Could not read manifest {manifest_path}: {e}")
                 df = pd.read_excel(self.excel_path)

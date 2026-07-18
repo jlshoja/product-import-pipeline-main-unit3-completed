@@ -67,6 +67,7 @@ runtime/logs/
 runtime/state/
 runtime/cache/
 runtime/reports/
+runtime/outputs/
 
 # Keep generated reports that are actively viewed
 # but ignore the archive of old snapshots

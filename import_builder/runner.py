@@ -132,16 +132,57 @@ def _count_files(folder):
         return 0
 
 
+def _expected_skus_from_env():
+    """Subset of SKUs the pipeline wants imported this run, or None.
+
+    In incremental mode main.py sets IMPORT_EXPECTED_SKUS to the comma-separated
+    subset (new ∪ colour-changed). We normalise each to its numeric prefix so it
+    lines up with product.csv SKUs and on-disk image prefixes. None/empty means
+    "no incremental scoping — use every SKU in the input file" (full mode).
+    """
+    raw = os.environ.get('IMPORT_EXPECTED_SKUS', '').strip()
+    if not raw:
+        return None
+    skus = set()
+    for tok in raw.split(','):
+        tok = tok.strip()
+        if not tok:
+            continue
+        m = _PREFIX_RE.match(tok)
+        if m:
+            skus.add(m.group(1))
+    return skus or None
+
+
 def main():
-    input_file = ROOT_DIR / "data" / "outputs" / "product.csv"
-    source_images_base = ROOT_DIR / "data" / "outputs" / "processed_images"
+    # Input CSV: default to the standardizer's product.csv, but allow the
+    # pipeline to point at an alternate build input via IMPORT_INPUT_CSV.
+    env_input = os.environ.get('IMPORT_INPUT_CSV', '').strip()
+    input_file = Path(env_input) if env_input else (ROOT_DIR / "data" / "outputs" / "product.csv")
+
+    # Source images: default to processed_images, overridable via
+    # IMPORT_SOURCE_IMAGES (e.g. to point at a specific dated session).
+    env_source = os.environ.get('IMPORT_SOURCE_IMAGES', '').strip()
+    source_images_base = Path(env_source) if env_source else (ROOT_DIR / "data" / "outputs" / "processed_images")
+
     dest_images = ROOT_DIR / "data" / "outputs" / "renamed_images" / datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     if not input_file.exists():
         print(f"ERROR: Input file not found: {input_file}")
         return False
 
-    expected_skus = _read_expected_skus(input_file)
+    # Coverage/gate scope: intersect the input file's SKUs with the incremental
+    # subset (when set) so we only require images for the products this run is
+    # actually importing — not the whole catalog.
+    file_skus = _read_expected_skus(input_file)
+    subset = _expected_skus_from_env()
+    if subset is not None:
+        expected_skus = file_skus & subset if file_skus else subset
+        print(f"Incremental import scope: {len(expected_skus)} SKU(s) "
+              f"(subset ∩ input file)")
+    else:
+        expected_skus = file_skus
+
     source_images, coverage, expected_count = _select_source_images(
         source_images_base, expected_skus
     )
@@ -175,7 +216,7 @@ def main():
 
         dest_images.mkdir(parents=True, exist_ok=True)
 
-        df_output, mappings = process_products_v12(
+        df_output, mappings, copy_stats = process_products_v12(
             input_file=str(input_file),
             process_images=True,
             source_images_folder=str(source_images),
@@ -186,10 +227,24 @@ def main():
             print("ERROR: Import builder processing failed.")
             return False
 
-        # Guard against the silent-failure mode: if the generator expected to
-        # copy images (a non-empty source→target mapping) but nothing landed in
-        # the destination, the WooCommerce CSV would reference image URLs whose
-        # files were never produced. Treat that as a hard failure.
+        # Per-image gate: the generator copies images BEFORE writing the CSVs
+        # and reports any mapped image it could not find. If any are missing it
+        # returns without writing the CSVs — treat that as a hard failure so a
+        # broken import (rows referencing absent images) is never emitted.
+        copy_stats = copy_stats or {}
+        missing = copy_stats.get('missing', 0)
+        if missing:
+            print(
+                f"ERROR: {missing} mapped image(s) were missing from "
+                f"{source_images}; the WooCommerce CSVs were not written. "
+                f"Re-run image processing so every product SKU has its images, "
+                f"then rebuild. Missing sources: "
+                f"{', '.join(copy_stats.get('missing_sources', [])[:20])}"
+            )
+            return False
+
+        # Secondary guard: if images were expected but nothing landed on disk,
+        # abort rather than emit a CSV referencing files that were never copied.
         copied = _count_files(dest_images)
         if mappings and copied == 0:
             print(

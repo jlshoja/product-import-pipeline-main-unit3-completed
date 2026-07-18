@@ -213,7 +213,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
         for col in df_input.columns:
             print(f"   - {col}")
         print("\n💡 Please add 'شماره' column with row numbers (1, 2, 3, ...)")
-        return None, None
+        return None, None, None
     
     # Validation
     if HAS_PRODUCT_MANAGER and product_name_manager:
@@ -457,8 +457,69 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     
     # ساخت DataFrame خروجی
     df_output = pd.DataFrame(output_rows)
-    
-    # ذخیره CSV
+
+    # ── Copy images BEFORE writing the CSVs ──────────────────────────────
+    # The WooCommerce CSVs reference image filenames. If we wrote the CSVs first
+    # and the image copy then failed, we'd emit an import pointing at files that
+    # never landed on disk. Copy first, track exactly which mapped images were
+    # found vs missing, and let the caller gate on missing images before the
+    # CSVs are treated as valid.
+    copy_stats = {
+        'expected': len(image_mappings),
+        'copied': 0,
+        'missing': 0,
+        'missing_sources': [],
+    }
+    if process_images and source_images_folder and dest_images_folder:
+        print(f"\n🖼️ Processing images (copying before CSV write)...")
+
+        for source_name, target_name in image_mappings.items():
+            extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.JPG', '.JPEG', '.PNG', '.WEBP']
+            source_path = None
+
+            # Try exact match first (e.g. 5718a.webp)
+            for ext in extensions:
+                test_path = Path(source_images_folder) / f"{source_name}{ext}"
+                if test_path.exists():
+                    source_path = test_path
+                    break
+
+            # Try prefix match (e.g. 5718a_black.webp)
+            if not source_path:
+                for f in Path(source_images_folder).iterdir():
+                    if f.stem.startswith(source_name + '_') and f.suffix.lower() in [e.lower() for e in extensions]:
+                        source_path = f
+                        break
+
+            if source_path:
+                dest_path = Path(dest_images_folder) / target_name
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_path, dest_path)
+                copy_stats['copied'] += 1
+                print(f"  ✅ {source_name} → {target_name}")
+            else:
+                copy_stats['missing'] += 1
+                copy_stats['missing_sources'].append(source_name)
+                print(f"  ⚠️ Missing: {source_name}")
+
+        print(f"\n   ✅ Copied: {copy_stats['copied']} images")
+        if copy_stats['missing'] > 0:
+            print(f"   ⚠️ Missing: {copy_stats['missing']} images")
+
+        # Per-image gate: if any mapped image is missing, do NOT write the CSVs.
+        # A partial import silently drops product images, which is worse than
+        # failing loudly and re-running image processing.
+        if copy_stats['missing'] > 0:
+            print(
+                f"\n❌ {copy_stats['missing']} mapped image(s) were not found in "
+                f"{source_images_folder}. Skipping CSV creation so a broken import "
+                f"is not emitted. Missing sources: "
+                f"{', '.join(copy_stats['missing_sources'][:20])}"
+                + (" ..." if len(copy_stats['missing_sources']) > 20 else "")
+            )
+            return df_output, image_mappings, copy_stats
+
+    # ذخیره CSV (only reached when every mapped image was copied)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     date_str = datetime.now().strftime('%Y%m%d')
     uploads_dir = str(IMPORT_BUILDER_UPLOADS_DIR)
@@ -497,53 +558,14 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
                     print(f"✅ Update products CSV: {update_csv}  ({len(df_update_out)} rows)")
     except Exception as e:
         print(f"⚠️  Could not split CSVs by manifests: {e}")
-    
+
     print("\n" + "="*70)
     print(f"✅ CSV created: {output_csv}")
     print(f"   📊 Total products: {len(grouped)}")
     print(f"   📊 Total rows: {len(df_output)}")
-    
-    # پردازش عکس‌ها
-    if process_images and source_images_folder and dest_images_folder:
-        print(f"\n🖼️ Processing images...")
-        copied_count = 0
-        missing_count = 0
-        
-        for source_name, target_name in image_mappings.items():
-            extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.JPG', '.JPEG', '.PNG', '.WEBP']
-            source_path = None
-
-            # Try exact match first (e.g. 5718a.webp)
-            for ext in extensions:
-                test_path = Path(source_images_folder) / f"{source_name}{ext}"
-                if test_path.exists():
-                    source_path = test_path
-                    break
-
-            # Try prefix match (e.g. 5718a_black.webp)
-            if not source_path:
-                for f in Path(source_images_folder).iterdir():
-                    if f.stem.startswith(source_name + '_') and f.suffix.lower() in [e.lower() for e in extensions]:
-                        source_path = f
-                        break
-            
-            if source_path:
-                dest_path = Path(dest_images_folder) / target_name
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source_path, dest_path)
-                copied_count += 1
-                print(f"  ✅ {source_name} → {target_name}")
-            else:
-                missing_count += 1
-                print(f"  ⚠️ Missing: {source_name}")
-        
-        print(f"\n   ✅ Copied: {copied_count} images")
-        if missing_count > 0:
-            print(f"   ⚠️ Missing: {missing_count} images")
-    
     print("="*70)
-    
-    return df_output, image_mappings
+
+    return df_output, image_mappings, copy_stats
 
 
 if __name__ == "__main__":
@@ -565,7 +587,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     try:
-        df_output, mappings = process_products_v12(
+        df_output, mappings, copy_stats = process_products_v12(
             input_file,
             process_images=process_images_flag,
             source_images_folder=SOURCE_IMAGES_FOLDER,  # ✅ همیشه پاس بده، fallback داخل تابع هندل میشه

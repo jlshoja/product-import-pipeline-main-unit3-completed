@@ -461,7 +461,30 @@ def process_images_unified(input_folder, output_folder, max_size_kb=50,
     if not categories:
         print("No files with category number found!")
         return 0
-    
+
+    # Incremental scope: when the pipeline runs in incremental mode it sets
+    # IMG_PROCESS_SKUS to the comma-separated category numbers to (re)process.
+    # Restrict to those so we don't reprocess every previously-downloaded
+    # session sitting in the input folder. Empty/unset → process everything.
+    allow_raw = os.environ.get('IMG_PROCESS_SKUS', '').strip()
+    if allow_raw:
+        allow_codes = set()
+        for tok in allow_raw.split(','):
+            tok = tok.strip()
+            if not tok:
+                continue
+            m = re.match(r'^(\d+)', tok)
+            if m:
+                allow_codes.add(int(m.group(1)))
+        if allow_codes:
+            before = len(categories)
+            categories = {c: imgs for c, imgs in categories.items() if c in allow_codes}
+            print(f"Incremental scope: {len(categories)}/{before} categories "
+                  f"match IMG_PROCESS_SKUS allowlist\n")
+        if not categories:
+            print("No categories match the incremental allowlist — nothing to process.")
+            return 0
+
     print(f"Found {len(categories)} categories: {sorted(categories.keys())}\n")
     
     # Process each category

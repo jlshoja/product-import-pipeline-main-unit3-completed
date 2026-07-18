@@ -315,25 +315,33 @@ class ProductScraperApp:
             if not self._upstream_output_ready("Standardizer", standardized_input):
                 return False
 
-            # If manifests exist, set env vars so import_builder splits new/update CSVs
+            # Manifest env vars drive the new/updated CSV split. Change Detection
+            # is the source of truth and already set NEW_MANIFEST / UPDATED_MANIFEST
+            # / IMPORT_EXPECTED_SKUS for incremental runs (see run_change_detection).
+            # Here we only cover the STANDALONE case — run_import_builder invoked
+            # directly without Change Detection having run this process — by
+            # locating the newest reports folder's manifests as a best-effort
+            # fallback. We never override values Change Detection set.
             try:
-                reports_root = Path(RUNTIME_REPORTS_DIR)
-                subdirs = [d for d in reports_root.iterdir() if d.is_dir()]
-                manifest_new = manifest_updated = None
-                if subdirs:
-                    latest = max(subdirs, key=lambda p: p.stat().st_mtime)
-                    mn = latest / 'new_products_list.csv'
-                    mu = latest / 'updated_products_list.csv'
-                    if mn.exists():
-                        os.environ['NEW_MANIFEST'] = str(mn)
-                        manifest_new = str(mn)
-                    if mu.exists():
-                        os.environ['UPDATED_MANIFEST'] = str(mu)
-                        manifest_updated = str(mu)
-                if manifest_new or manifest_updated:
-                    self.logger.info(f"Import Builder: NEW_MANIFEST={manifest_new}, UPDATED_MANIFEST={manifest_updated}")
+                if not self.change_result and not os.environ.get('NEW_MANIFEST') \
+                        and not os.environ.get('UPDATED_MANIFEST'):
+                    reports_root = Path(RUNTIME_REPORTS_DIR)
+                    subdirs = [d for d in reports_root.iterdir() if d.is_dir()]
+                    if subdirs:
+                        latest = max(subdirs, key=lambda p: p.stat().st_mtime)
+                        mn = latest / 'new_products_list.csv'
+                        mu = latest / 'updated_products_list.csv'
+                        if mn.exists():
+                            os.environ['NEW_MANIFEST'] = str(mn)
+                        if mu.exists():
+                            os.environ['UPDATED_MANIFEST'] = str(mu)
+
+                mn_env = os.environ.get('NEW_MANIFEST')
+                mu_env = os.environ.get('UPDATED_MANIFEST')
+                if mn_env or mu_env:
+                    self.logger.info(f"Import Builder: NEW_MANIFEST={mn_env}, UPDATED_MANIFEST={mu_env}")
             except Exception:
-                pass
+                self.logger.warning("Import Builder: failed to resolve fallback manifests", exc_info=True)
 
             result = import_builder_main()
 
@@ -342,6 +350,177 @@ class ProductScraperApp:
 
         except Exception as e:
             self.logger.error(f"Error in Import Builder: {e}", exc_info=True)
+            return False
+
+    @staticmethod
+    def _sku_to_code(sku):
+        """Extract the numeric product code (3–6 digits) from a SKU/name.
+
+        Matches the extraction compare_scans and the image scripts use so the
+        processor's allowlist keys agree with the downloaded filenames.
+        """
+        from common.text_utils import extract_numeric_code
+        return extract_numeric_code(str(sku), min_digits=3, max_digits=6) or ''
+
+    def _resolve_incremental_mode(self):
+        """Decide whether this run is 'full' or 'incremental'.
+
+        Honours the requested mode:
+          - 'full'        → always full.
+          - 'incremental' → incremental (falls back to full if no prior catalog).
+          - 'auto'        → full when there is no previous WooCommerce catalog to
+                            diff against (first run); otherwise incremental. When
+                            attended (interactive TTY and not AUTO_RESUME/CI
+                            unattended) the user is asked to confirm once.
+
+        Returns 'full' or 'incremental'. Does not run the comparison.
+        """
+        import trackers.compare_scans as cs
+
+        requested = getattr(self, 'requested_mode', 'auto')
+        if requested == 'full':
+            return 'full'
+
+        prev_catalog = cs.find_previous_woo_file()
+        if not prev_catalog:
+            self.logger.info(
+                "No previous WooCommerce catalog found — running FULL (first run)."
+            )
+            return 'full'
+
+        if requested == 'incremental':
+            return 'incremental'
+
+        # requested == 'auto' and a previous catalog exists.
+        unattended = os.getenv('AUTO_RESUME') is not None or not sys.stdin.isatty()
+        if unattended:
+            self.logger.info(
+                "Previous catalog found — auto-selecting INCREMENTAL (unattended)."
+            )
+            return 'incremental'
+
+        # Attended: ask once.
+        try:
+            ans = input(
+                "A previous WooCommerce catalog exists.\n"
+                "  [1] Incremental update (only new / changed products)  [default]\n"
+                "  [2] Full reprocess (all products from scratch)\n"
+                "Choose (1/2): "
+            ).strip()
+        except Exception:
+            ans = ''
+        return 'full' if ans == '2' else 'incremental'
+
+    @log_execution_time()
+    def run_change_detection(self):
+        """Resolve full vs incremental and, when incremental, compute the subset.
+
+        - In FULL mode: process everything (subset = None), never skip.
+        - In INCREMENTAL mode: run compare_scans against the previous catalog.
+            * new = 0 and changed = 0  → nothing to do; skip image + import.
+            * otherwise → image subset = new ∪ colour-changed; wire the
+              new/updated manifests so the import builder splits the two CSVs and
+              the downloader fetches only the subset.
+
+        Always returns True (a comparison producing "no changes" is a success,
+        not a failure) unless an unexpected error occurs.
+        """
+        self.logger.info("="*70)
+        self.logger.info("[CHANGE] Running Change Detection")
+        self.logger.info("="*70)
+
+        try:
+            self.effective_mode = self._resolve_incremental_mode()
+            self.logger.info(f"[CHANGE] Effective mode: {self.effective_mode}")
+
+            if self.effective_mode == 'full':
+                # Full run: no subset, no skip, no manifests. Clear any manifest
+                # env vars a previous run may have left set in this process.
+                self.image_subset_skus = None
+                self.skip_image_and_import = False
+                for var in ('NEW_MANIFEST', 'UPDATED_MANIFEST', 'IMG_MANIFEST',
+                            'IMPORT_EXPECTED_SKUS'):
+                    os.environ.pop(var, None)
+                return True
+
+            # Incremental: run the comparison.
+            import trackers.compare_scans as cs
+            result = cs.run_auto_compare()
+
+            if not result:
+                # No scan or no previous catalog surfaced late → treat as full so
+                # we never silently skip work.
+                self.logger.warning(
+                    "[CHANGE] Comparison unavailable — falling back to FULL."
+                )
+                self.effective_mode = 'full'
+                self.image_subset_skus = None
+                self.skip_image_and_import = False
+                return True
+
+            self.change_result = result
+            counts = result.get('counts', {})
+            self.logger.info(
+                f"[CHANGE] new={counts.get('new', 0)} "
+                f"changed={counts.get('changed', 0)} "
+                f"(price={counts.get('price', 0)}, colour={counts.get('color', 0)}) "
+                f"removed={counts.get('removed', 0)}"
+            )
+
+            new_skus = result.get('new_skus', [])
+            image_subset = result.get('image_subset_skus', [])
+            manifests = result.get('manifests', {})
+
+            # Scenario: nothing new and nothing changed → stop early.
+            if counts.get('new', 0) == 0 and counts.get('changed', 0) == 0:
+                self.logger.info(
+                    "[CHANGE] No new products and no changes detected. "
+                    "Skipping image processing and import build."
+                )
+                print("\n" + "="*70)
+                print("No new products and no changes were detected.")
+                print("Nothing to download, process, or import. Pipeline stops here.")
+                print("="*70 + "\n")
+                self.skip_image_and_import = True
+                self.image_subset_skus = []
+                return True
+
+            # There is work to do. Record the image subset (new ∪ colour-changed).
+            self.skip_image_and_import = False
+            self.image_subset_skus = list(image_subset)
+
+            # Wire manifests for the downstream stages:
+            #  - NEW_MANIFEST / UPDATED_MANIFEST → generator splits the two CSVs.
+            #  - IMPORT_EXPECTED_SKUS → runner scopes coverage/gate to the subset.
+            new_manifest = manifests.get('new')
+            updated_manifest = manifests.get('updated')
+            if new_manifest and Path(new_manifest).exists():
+                os.environ['NEW_MANIFEST'] = new_manifest
+            if updated_manifest and Path(updated_manifest).exists():
+                os.environ['UPDATED_MANIFEST'] = updated_manifest
+            # The import builder only needs images for the subset; pass the exact
+            # SKU list so its coverage/gate is scoped correctly.
+            os.environ['IMPORT_EXPECTED_SKUS'] = ','.join(str(s) for s in image_subset)
+
+            if not image_subset:
+                # Changed products are price-only (no new colour): no images to
+                # (re)process, but we still emit the updated CSV via import build.
+                self.logger.info(
+                    "[CHANGE] Only price changes detected — no images to "
+                    "reprocess; will still build the updated-products CSV."
+                )
+                self.skip_image_only = True
+            else:
+                self.skip_image_only = False
+                self.logger.info(
+                    f"[CHANGE] {len(image_subset)} product(s) need image "
+                    f"processing ({len(new_skus)} new)."
+                )
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error in Change Detection: {e}", exc_info=True)
             return False
 
     @log_execution_time()
@@ -381,26 +560,48 @@ class ProductScraperApp:
         download_env["IMG_OUTPUT"]   = downloaded_folder
         download_env["IMG_SELENIUM"] = "1"
         download_env["IMG_RETRIES"]  = "3"
-        # If tracker produced a manifest, process only new products
-        # Look for the most recent dated reports folder containing new_products_list.csv
+
+        # Incremental vs full download selection.
+        #
+        # In incremental mode Change Detection wrote an image-subset manifest
+        # (image_subset_list.csv: sku,url,image_urls,reason) listing exactly the
+        # products whose images must be fetched (new ∪ colour-changed). We hand
+        # that to the downloader so it fetches ONLY those pages. Existing
+        # unchanged products keep their already-downloaded images.
+        #
+        # In full mode we download every product from the links file.
+        subset = getattr(self, 'image_subset_skus', None)
         manifest_file = None
-        try:
-            reports_root = Path(RUNTIME_REPORTS_DIR)
-            subdirs = [d for d in reports_root.iterdir() if d.is_dir()]
-            if subdirs:
-                latest = max(subdirs, key=lambda p: p.stat().st_mtime)
-                candidate = latest / 'new_products_list.csv'
-                if candidate.exists():
-                    manifest_file = str(candidate)
-        except Exception:
-            manifest_file = None
+        if subset is not None:
+            # Incremental: prefer the image-subset manifest written this run.
+            if self.change_result:
+                cand = (self.change_result.get('manifests') or {}).get('image_subset')
+                if cand and Path(cand).exists():
+                    manifest_file = cand
+            if not manifest_file:
+                # Fallback: newest reports folder holding an image_subset_list.csv
+                try:
+                    reports_root = Path(RUNTIME_REPORTS_DIR)
+                    subdirs = [d for d in reports_root.iterdir() if d.is_dir()]
+                    if subdirs:
+                        latest = max(subdirs, key=lambda p: p.stat().st_mtime)
+                        c = latest / 'image_subset_list.csv'
+                        if c.exists():
+                            manifest_file = str(c)
+                except Exception:
+                    manifest_file = None
 
         if manifest_file:
             download_env["IMG_MANIFEST"] = manifest_file
             download_env["IMG_MODE"]     = "full"
             download_env["IMG_RESUME"]   = "fresh"
-            self.logger.info(f"[IMG] Using manifest for image download: {manifest_file}")
+            # The downloader dedups per-file (identical {sku}{letter}{ext} on
+            # disk is reused), so colour-changed products still fetch their new
+            # images while unchanged files are skipped automatically.
+            self.logger.info(f"[IMG] Incremental download via subset manifest: {manifest_file}")
         else:
+            # Full download of all products.
+            download_env.pop("IMG_MANIFEST", None)
             download_env["IMG_MODE"]     = "full"
             download_env["IMG_RESUME"]   = "fresh"
 
@@ -442,6 +643,18 @@ class ProductScraperApp:
             "-m", "100",  # main size KB (menu.py default)
         ]
 
+        # In incremental mode, restrict processing to the subset's category
+        # numbers so the processor doesn't reprocess every previously-downloaded
+        # session. The processor reads IMG_PROCESS_SKUS (comma-separated codes).
+        process_env = download_env.copy()
+        if subset is not None:
+            codes = [self._sku_to_code(s) for s in subset]
+            codes = [c for c in codes if c]
+            process_env["IMG_PROCESS_SKUS"] = ','.join(codes)
+            self.logger.info(f"[IMG] Processing restricted to {len(codes)} subset code(s).")
+        else:
+            process_env.pop("IMG_PROCESS_SKUS", None)
+
         self.logger.info("[IMG] Step 2/2 - Processing and compressing images...")
         # processing step also gets a timeout and retry
         proc_ok = False
@@ -450,7 +663,7 @@ class ProductScraperApp:
             try:
                 attempt += 1
                 self.logger.info(f"[IMG] processing attempt {attempt}/{retry_count + 1}")
-                result = subprocess.run(process_cmd, cwd=str(image_dir), timeout=timeout_sec)
+                result = subprocess.run(process_cmd, cwd=str(image_dir), env=process_env, timeout=timeout_sec)
                 if result.returncode == 0:
                     proc_ok = True
                 else:
@@ -467,11 +680,27 @@ class ProductScraperApp:
         self.logger.info(" Image Processing completed successfully")
         return True
 
-    def run_auto_pipeline(self):
+    def run_auto_pipeline(self, mode='auto'):
         """Run the entire pipeline unattended (automatic execution mode).
 
         Order: link scrape -> spec scrape (fresh) -> standardize ->
-        image download+process -> import build. No interactive prompts.
+        change detection -> image download+process -> import build. No
+        interactive prompts (unless attended + auto mode, where the user is
+        asked to confirm full vs incremental once).
+
+        mode:
+          'full'        — always scrape, download, process and build for ALL
+                          products (the original behaviour).
+          'incremental' — after standardizing, compare against the previous
+                          WooCommerce catalog and only download/process/rename
+                          images for NEW products and products that gained a new
+                          colour. Existing unchanged products are reused. Two
+                          WooCommerce CSVs are emitted (new / updated).
+          'auto'        — pick automatically: first run (no previous catalog)
+                          runs full; otherwise incremental. When attended
+                          (interactive terminal, not unattended) the user is
+                          asked to confirm.
+
         Sets AUTO_MODE=1 so spec_scraper skips its resume menu. At the end,
         prints an English warning if Gemini left any unknown colors/names
         unresolved during standardization.
@@ -479,7 +708,15 @@ class ProductScraperApp:
         import os
         os.environ['AUTO_MODE'] = '1'
 
-        self.logger.info("\n Starting AUTOMATIC pipeline execution...\n")
+        # Per-run incremental state (reset every invocation).
+        self.requested_mode = mode
+        self.effective_mode = None            # resolved to 'full' or 'incremental'
+        self.change_result = None             # dict from compare_scans, or None
+        self.image_subset_skus = None         # None = all products; set = subset
+        self.skip_image_and_import = False    # True when nothing changed at all
+        self.skip_image_only = False          # True when only price changed (no images)
+
+        self.logger.info(f"\n Starting AUTOMATIC pipeline execution (mode={mode})...\n")
 
         # Track the standardizer's unresolved-unknown report for the final warning
         unresolved_colors = []
@@ -489,8 +726,13 @@ class ProductScraperApp:
             ("Link Scraper", self.run_link_scraper),
             ("Spec Scraper", self.run_spec_scraper),
             ("Standardizer", self.run_standardizer),
-            # After standardizer we run a tracker to produce manifests
-            # then image processing and import builder consume those manifests
+            # Change detection resolves full vs incremental and, when
+            # incremental, computes the subset of SKUs whose images must be
+            # (re)processed and writes the new/updated manifests the CSV split
+            # and image download consume.
+            ("Change Detection", self.run_change_detection),
+            # Image processing and import builder honour the subset / skip flags
+            # that Change Detection sets.
             ("Image Processing", self.run_image_processing),
             ("Import Builder", self.run_import_builder),
         ]
@@ -578,6 +820,25 @@ class ProductScraperApp:
                         self.logger.info(f" Skipping {step_name} (already done in this run)")
                         results[step_name] = True
                         continue
+
+            # When change detection determined nothing needs (re)processing,
+            # Image Processing and Import Builder are legitimately skipped —
+            # record them as successful-skips, not failures, so the pipeline
+            # completes cleanly (Scenario: "no new products / no changes").
+            if self.skip_image_and_import and step_name in ("Image Processing", "Import Builder"):
+                self.logger.info(f" Skipping {step_name} (no new or changed products this run)")
+                update_step(step_name, 'done', {'skipped': 'no changes'})
+                results[step_name] = True
+                continue
+
+            # Price-only changes: no images to (re)process, but the import
+            # builder still runs to emit the updated-products CSV. Skip only the
+            # Image Processing stage.
+            if self.skip_image_only and step_name == "Image Processing":
+                self.logger.info(" Skipping Image Processing (price-only changes, no new images)")
+                update_step(step_name, 'done', {'skipped': 'price-only changes'})
+                results[step_name] = True
+                continue
 
             retry_count = 0
             result = False
@@ -893,6 +1154,20 @@ def main():
         action='store_true',
         help='Show more details'
     )
+
+    parser.add_argument(
+        '--mode',
+        choices=['auto', 'full', 'incremental'],
+        default='auto',
+        help=(
+            "Processing mode for the 'auto' pipeline: "
+            "'auto' = detect changes vs the previous catalog and process only "
+            "new/changed products (full on the first run); "
+            "'full' = always reprocess everything; "
+            "'incremental' = force change-detection even if it would otherwise "
+            "fall back to full. Default: auto."
+        )
+    )
     
     args = parser.parse_args()
     
@@ -918,7 +1193,7 @@ def main():
     elif args.command == 'test':
         success = app.run_tests()
     elif args.command == 'auto':
-        success = app.run_auto_pipeline()
+        success = app.run_auto_pipeline(mode=args.mode)
     else:  # full
         success = app.run_full_pipeline()
     

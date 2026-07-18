@@ -409,6 +409,23 @@ def write_sheet_links(wb, new_products, new_colors_full, links_map):
 
 
 def compare(scan_path, woo_path, output_path, links_path=None):
+    """Compare a new scan against the previous WooCommerce catalog.
+
+    Writes the Excel change report and three CSV manifests (new /
+    updated / image-subset) into the output folder, then returns a
+    structured partition of SKUs for programmatic callers:
+
+        {
+          'new_skus':          [...],   # in scan, not in catalog
+          'changed_skus':      [...],   # price and/or color changed
+          'price_changed_skus':[...],
+          'color_added_skus':  [...],   # gained a new color variant
+          'image_subset_skus': [...],   # new ∪ color_added (images to (re)process)
+          'removed_skus':      [...],
+          'counts':            {...},
+          'manifests':         {'new':..., 'updated':..., 'image_subset':...},
+        }
+    """
     df_scan = read_excel(scan_path, dtype={"sku": str})
     df_scan["sku"] = df_scan["sku"].str.strip()
 
@@ -574,91 +591,102 @@ def compare(scan_path, woo_path, output_path, links_path=None):
     write_sheet_colors(wb, color_changes)
 
     wb.save(output_path)
-    # ── Write manifests (new / updated) into the same reports folder
+
+    # ── Build the SKU → product-page-URL map so downstream image download can
+    # fetch only the products it needs. links_map is keyed by numeric code
+    # (extract_code), so we resolve each SKU's code to its URL.
+    def _url_for_sku(sku):
+        code = extract_code(str(sku))
+        info = links_map.get(code) if code else None
+        return (info.get("url", "") if info else "")
+
+    # ── SKU partition sets (the contract change-detection consumes) ──────
+    new_sku_set = {str(s).strip() for s in new_products["sku"]} if "sku" in new_products.columns else set()
+    price_changed_skus = {str(r[0]).strip() for r in price_changes}
+    # Color-changed = existing products that gained at least one NEW color
+    # (added non-empty). These are the only "changed" products whose images
+    # must be (re)downloaded; a pure price change reuses existing images.
+    color_added_skus = {str(r[0]).strip() for r in color_changes if str(r[4] or "").strip()}
+    changed_sku_set = price_changed_skus | color_added_skus
+    # Images to (re)process = brand-new products ∪ products with a new color.
+    image_subset_skus = new_sku_set | color_added_skus
+
+    # ── Write manifests (new / updated / image-subset) into reports folder ─
+    new_manifest = Path(output_path).parent / "new_products_list.csv"
+    updated_manifest = Path(output_path).parent / "updated_products_list.csv"
+    image_manifest = Path(output_path).parent / "image_subset_list.csv"
     try:
         out_dir = Path(output_path).parent
-        # New products manifest
-        new_manifest = out_dir / "new_products_list.csv"
-        try:
-            # new_products is a DataFrame
-            cols = ['sku']
-            if 'نام_محصول' in new_products.columns:
-                cols.append('name')
-            if 'قیمت_اصلی' in new_products.columns:
-                cols.append('price')
-            # try to find url column
-            url_col = None
-            for c in ['Product URL', 'Product_URL', 'url', 'ProductURL']:
-                if c in new_products.columns:
-                    url_col = c
-                    break
-            if url_col:
-                cols.append('url')
 
-            df_new_man = pd.DataFrame()
-            sku_col = 'sku' if 'sku' in new_products.columns else ('SKU' if 'SKU' in new_products.columns else None)
-            if sku_col:
-                df_new_man['sku'] = new_products[sku_col].astype(str)
-            if 'نام_محصول' in new_products.columns:
-                df_new_man['name'] = new_products['نام_محصول']
-            if 'قیمت_اصلی' in new_products.columns:
-                df_new_man['price'] = new_products['قیمت_اصلی']
-            if url_col:
-                df_new_man['url'] = new_products[url_col]
+        # scan sku -> image_urls (if the scan carries them)
+        scan_img_map = {}
+        if not df_scan.empty and 'sku' in df_scan.columns and 'image_urls' in df_scan.columns:
+            for _, r in df_scan.iterrows():
+                key = str(r.get('sku', '')).strip()
+                if key:
+                    scan_img_map[key] = r.get('image_urls', '')
 
-            # Enrich with image URLs if scan file provided and has image_urls
-            if 'df_scan' in locals() and not df_scan.empty:
-                scan_img_map = {}
-                if 'sku' in df_scan.columns and 'image_urls' in df_scan.columns:
-                    for _, r in df_scan.iterrows():
-                        key = str(r.get('sku', ''))
-                        if key:
-                            scan_img_map[key] = r.get('image_urls', '')
-                if not df_new_man.empty and 'sku' in df_new_man.columns:
-                    df_new_man['image_urls'] = df_new_man['sku'].map(scan_img_map).fillna('')
+        # New products manifest — always carries sku + resolved product URL so
+        # the downloader can fetch by page. Empty (header-only) when none.
+        df_new_man = pd.DataFrame()
+        sku_col = 'sku' if 'sku' in new_products.columns else ('SKU' if 'SKU' in new_products.columns else None)
+        if sku_col:
+            df_new_man['sku'] = new_products[sku_col].astype(str).str.strip()
+        else:
+            df_new_man['sku'] = pd.Series(dtype=str)
+        if 'نام_محصول' in new_products.columns:
+            df_new_man['name'] = new_products['نام_محصول'].values
+        if 'قیمت_اصلی' in new_products.columns:
+            df_new_man['price'] = new_products['قیمت_اصلی'].values
+        df_new_man['url'] = df_new_man['sku'].map(_url_for_sku).fillna('')
+        if scan_img_map:
+            df_new_man['image_urls'] = df_new_man['sku'].map(scan_img_map).fillna('')
+        df_new_man.to_csv(new_manifest, index=False, encoding='utf-8-sig')
 
-            df_new_man.to_csv(new_manifest, index=False, encoding='utf-8-sig')
-        except Exception:
-            # fallback: if no dataframe structure, try minimal new list
-            pass
-
-        # Updated products manifest (price + color changes)
-        updated_manifest = out_dir / "updated_products_list.csv"
+        # Updated products manifest (price + color changes) with change_type.
         updated_rows = []
         for row in price_changes:
             try:
-                sku = row[0]
-                name = row[1]
-                before = row[2]
-                after = row[3]
                 updated_rows.append({
-                    'sku': sku,
-                    'name': name,
-                    'change_type': 'price',
-                    'details': f"{before} -> {after}"
+                    'sku': str(row[0]).strip(), 'name': row[1],
+                    'change_type': 'price', 'details': f"{row[2]} -> {row[3]}",
+                    'url': _url_for_sku(row[0]),
                 })
             except Exception:
                 continue
         for row in color_changes:
             try:
-                sku = row[0]
-                name = row[1]
-                added = row[4]
-                removed = row[5]
-                details = f"added: {added}; removed: {removed}"
                 updated_rows.append({
-                    'sku': sku,
-                    'name': name,
+                    'sku': str(row[0]).strip(), 'name': row[1],
                     'change_type': 'color',
-                    'details': details
+                    'details': f"added: {row[4]}; removed: {row[5]}",
+                    'url': _url_for_sku(row[0]),
                 })
             except Exception:
                 continue
+        # Always write the file (header-only when empty) so downstream code can
+        # rely on its existence rather than guessing.
+        pd.DataFrame(updated_rows, columns=['sku', 'name', 'change_type', 'details', 'url']).to_csv(
+            updated_manifest, index=False, encoding='utf-8-sig'
+        )
 
-        if updated_rows:
-            pd.DataFrame(updated_rows).to_csv(updated_manifest, index=False, encoding='utf-8-sig')
-    except Exception:
-        pass
+        # Image-subset manifest — the exact products whose images must be
+        # downloaded/processed/renamed this run (new ∪ color-added). Carries a
+        # resolved product URL per SKU so the downloader fetches only these.
+        img_rows = []
+        for sku in sorted(image_subset_skus):
+            img_rows.append({
+                'sku': sku,
+                'url': _url_for_sku(sku),
+                'image_urls': scan_img_map.get(sku, ''),
+                'reason': 'new' if sku in new_sku_set else 'color',
+            })
+        pd.DataFrame(img_rows, columns=['sku', 'url', 'image_urls', 'reason']).to_csv(
+            image_manifest, index=False, encoding='utf-8-sig'
+        )
+    except Exception as e:
+        print(f"⚠️  Could not write one or more manifests: {e}")
+
     print(f"✓ Output saved:      {output_path}")
     print(f"✓ SKUs to delete:    {txt_path}")
     print(f"  New products:      {len(new_products)}")
@@ -670,6 +698,94 @@ def compare(scan_path, woo_path, output_path, links_path=None):
         print(f"  Links matched:     {links_matched} / {links_total}")
     else:
         print(f"  Links file:        not found, sheet skipped")
+
+    # Structured partition returned to programmatic callers (change detection in
+    # the auto pipeline). File outputs above stay identical for standalone use.
+    return {
+        'new_skus': sorted(new_sku_set),
+        'changed_skus': sorted(changed_sku_set),
+        'price_changed_skus': sorted(price_changed_skus),
+        'color_added_skus': sorted(color_added_skus),
+        'image_subset_skus': sorted(image_subset_skus),
+        'removed_skus': sorted({str(s).strip() for s in removed_products['sku']}) if 'sku' in removed_products.columns else [],
+        'counts': {
+            'new': len(new_sku_set),
+            'changed': len(changed_sku_set),
+            'price': len(price_changed_skus),
+            'color': len(color_added_skus),
+            'removed': len(removed_products),
+        },
+        'manifests': {
+            'new': str(new_manifest),
+            'updated': str(updated_manifest),
+            'image_subset': str(image_manifest),
+        },
+    }
+
+
+# ─── نقطه ورود قابل فراخوانی (برای main.py) ────────────────────────
+
+
+def find_previous_woo_file():
+    """Locate the most recent previously-generated WooCommerce catalog CSV.
+
+    Returns the path string, or None when no prior catalog exists (e.g. the
+    very first run). main.py uses a None result to mean "no baseline to compare
+    against → run full".
+    """
+    woo_dirs = [str(RUNTIME_CACHE_DIR / "import_builder" / "uploads")]
+    for d in woo_dirs:
+        woo_path = find_latest_woo_file(d)
+        if woo_path:
+            return woo_path
+    return None
+
+
+def run_auto_compare(scan_path=None, woo_path=None, links_path=None):
+    """Run change-detection using auto-located files and return the partition.
+
+    Locates the latest scan, the previous WooCommerce catalog, and the product
+    links file when the caller does not supply them. Writes the change report
+    plus the new / updated / image-subset manifests into a dated reports folder.
+
+    Returns the dict produced by compare() (see its docstring), or None when a
+    required input is missing (no scan, or no previous catalog to diff against).
+    The returned dict includes the manifest paths so the caller can wire them
+    into the downstream image + import stages.
+    """
+    reports_dir = str(RUNTIME_REPORTS_DIR)
+    links_dirs = [str(INTERMEDIATE_DIR), reports_dir]
+
+    if not scan_path:
+        scan_path = find_latest_scan(reports_dir)
+        if not scan_path:
+            scan_path = find_latest_scan(str(LEGACY_APP_DIR / "reports"))
+    if not scan_path:
+        return None
+
+    if not woo_path:
+        woo_path = find_previous_woo_file()
+    if not woo_path:
+        # No previous catalog → nothing to diff. Caller treats this as "first
+        # run / full".
+        return None
+
+    date_match = re.search(r"product_details_(\d{8}_\d{6})", os.path.basename(scan_path))
+    date_str = date_match.group(1) if date_match else None
+    if date_str:
+        dated = f"{date_str[0:4]}-{date_str[4:6]}-{date_str[6:8]}"
+        out_dir = str(get_dated_reports_dir(dated))
+        output_path = os.path.join(out_dir, f"product_changes_{date_str}.xlsx")
+    else:
+        output_path = os.path.join(reports_dir, "product_changes_unknown.xlsx")
+
+    if not links_path:
+        for d in links_dirs:
+            links_path = find_links_file(d)
+            if links_path:
+                break
+
+    return compare(scan_path, woo_path, output_path, links_path)
 
 
 # ─── اجرا ─────────────────────────────────────────────────────────
