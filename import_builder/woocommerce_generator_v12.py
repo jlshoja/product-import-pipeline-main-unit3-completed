@@ -90,6 +90,7 @@ ATTRIBUTE_SLUGS = {
 # نگاشت معکوس: slug → نام فارسی
 ATTRIBUTE_NAMES = {v: k.replace('_', ' ') for k, v in ATTRIBUTE_SLUGS.items()}
 ATTRIBUTE_NAMES['color'] = 'رنگ'
+ATTRIBUTE_NAMES['dimention'] = 'ابعاد'
 
 def normalize_persian_text(text):
     """نرمال‌سازی متن فارسی"""
@@ -259,6 +260,8 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
         
         # Use English version for console output to avoid encoding issues
         safe_product_name = product_name_en if product_name_en else product_name
+        # Ensure safe_product_name only contains ASCII characters for console
+        safe_product_name = safe_product_name.encode('ascii', 'replace').decode('ascii')
         print(f"\n[PRODUCT] Product {row_number}: {safe_product_name} (SKU: {product_sku})")
         
         # رنگ‌ها
@@ -432,7 +435,8 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
             if not variation_image:
                 if general_images:
                     variation_image = general_images.pop(0)
-                    print(f"   [FALLBACK] Color '{color_en}' -> general image: {variation_image}")
+                    safe_var = variation_image.encode('ascii', 'replace').decode('ascii')
+                    print(f"   [FALLBACK] Color '{color_en}' -> general image: {safe_var}")
                 else:
                     variation_image = main_image
                     print(f"   [FALLBACK] Color '{color_en}' -> main image (no general left)")
@@ -509,11 +513,14 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_path, dest_path)
                 copy_stats['copied'] += 1
-                print(f"  [OK] {source_name} -> {target_name}")
+                safe_src = source_name.encode('ascii', 'replace').decode('ascii')
+                safe_tgt = target_name.encode('ascii', 'replace').decode('ascii')
+                print(f"  [OK] {safe_src} -> {safe_tgt}")
             else:
                 copy_stats['missing'] += 1
                 copy_stats['missing_sources'].append(source_name)
-                print(f"  [WARN] Missing: {source_name}")
+                safe_src = source_name.encode('ascii', 'replace').decode('ascii')
+                print(f"  [WARN] Missing: {safe_src}")
 
         print(f"\n   [OK] Copied: {copy_stats['copied']} images")
         if copy_stats['missing'] > 0:
@@ -577,6 +584,14 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     print(f"   [DATA] Total products: {len(grouped)}")
     print(f"   [DATA] Total rows: {len(df_output)}")
     print("="*70)
+
+    # Export unknown colors to Excel
+    if color_manager and hasattr(color_manager, 'export_unknown_colors'):
+        color_manager.export_unknown_colors()
+    
+    # Export unknown product names to Excel
+    if product_name_manager and hasattr(product_name_manager, 'export_unknown_products'):
+        product_name_manager.export_unknown_products()
 
     return df_output, image_mappings, copy_stats
 

@@ -17,6 +17,9 @@ try:
 except ImportError:
     DEFAULT_COLOR_MAPPING_PATH = 'color_mapping.xlsx'
 
+# Default log file for missing colors
+_DEFAULT_LOG = os.path.join(os.path.dirname(__file__), '..', '..', 'runtime', 'logs', 'missing_colors.log')
+
 class ColorManager:
     """مدیر رنگ‌ها با قابلیت ترجمه فارسی به انگلیسی"""
     
@@ -140,16 +143,33 @@ class ColorManager:
             if persian_clean == key_clean:
                 return value
         
-        # Not found - add to missing list
+# Not found - add to missing list
         if persian_color not in self.missing_colors:
             self.missing_colors.append(persian_color)
             # Avoid encoding issues with Persian chars in console
             safe_color = persian_color.encode('ascii', 'replace').decode('ascii')
             print(f"[WARN] Color not found in mapping: '{safe_color}'")
-        
+            # Log to file
+            self._log_missing_color(persian_color)
+
         # Fallback: use transliterate
         transliterated = self._simple_transliterate(persian_color)
         return transliterated if transliterated else persian_color
+    
+    def _log_missing_color(self, persian_color):
+        """Save missing color to log file"""
+        try:
+            log_file = _DEFAULT_LOG
+            transliterated = self._simple_transliterate(persian_color)
+            
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+            
+            with open(log_file, 'a', encoding='utf-8') as f:
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                f.write(f"[{timestamp}] {persian_color} -> {transliterated}\n")
+        except Exception as e:
+            pass  # If log fails, continue silently
     
     def get_persian_color(self, english_color):
         """
@@ -268,7 +288,42 @@ class ColorManager:
         except Exception as e:
             print(f"[ERROR] Error saving missing colors: {e}")
             return 0
-    
+
+    def export_unknown_colors(self, output_folder=None):
+        """
+        Export unknown colors to a separate Excel file in the output folder
+        
+        Args:
+            output_folder: Path to output folder (default: data/outputs)
+            
+        Returns:
+            Path to created file or None if no unknown colors
+        """
+        if not self.missing_colors:
+            return None
+        
+        if output_folder is None:
+            from pathlib import Path
+            output_folder = Path(__file__).resolve().parent.parent / 'data' / 'outputs'
+        else:
+            output_folder = Path(output_folder)
+        
+        output_folder.mkdir(parents=True, exist_ok=True)
+        
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = output_folder / f'unknown_colors_{timestamp}.xlsx'
+        
+        df = pd.DataFrame({
+            'Persian': self.missing_colors,
+            'English': [''] * len(self.missing_colors),
+            'Notes': ['needs translation'] * len(self.missing_colors)
+        })
+        
+        df.to_excel(output_file, index=False)
+        print(f"Exported {len(self.missing_colors)} unknown colors to {output_file}")
+        return str(output_file)
+
     def validate_colors_in_dataframe(self, df, color_column='رنگ'):
         """Validate all colors in a DataFrame and return unknown ones"""
         if color_column not in df.columns:

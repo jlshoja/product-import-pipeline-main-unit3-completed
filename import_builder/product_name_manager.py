@@ -352,6 +352,41 @@ class ProductNameManager:
         
         print("="*70)
     
+    def export_unknown_products(self, output_folder=None):
+        """
+        Export unknown products to an Excel file in the output folder
+        
+        Args:
+            output_folder: Path to output folder (default: data/outputs)
+            
+        Returns:
+            Path to created file or None if no unknown products
+        """
+        if not self.missing_products:
+            return None
+        
+        if output_folder is None:
+            from pathlib import Path
+            output_folder = Path(__file__).resolve().parent.parent / 'data' / 'outputs'
+        else:
+            output_folder = Path(output_folder)
+        
+        output_folder.mkdir(parents=True, exist_ok=True)
+        
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = output_folder / f'unknown_names_{timestamp}.xlsx'
+        
+        df = pd.DataFrame({
+            'Persian': self.missing_products,
+            'English': [''] * len(self.missing_products),
+            'Notes': ['needs translation'] * len(self.missing_products)
+        })
+        
+        df.to_excel(output_file, index=False)
+        print(f"Exported {len(self.missing_products)} unknown product names to {output_file}")
+        return str(output_file)
+    
     def reload(self):
         """بارگذاری مجدد"""
         self.missing_products = []

@@ -267,7 +267,7 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
         print(f"   [OK] Generated {len(result['all_images_with_alts'])} image names from colors (no physical files needed)")
         return result
     
-    print(f"[IMG] Product {product_index_str}: {product_name_en}")
+    print(f"[IMG] Product {product_index_str}: {product_name_en.encode('ascii', 'replace').decode('ascii')}")
     
     result = {
         'mapping': {},
@@ -288,7 +288,7 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
         result['main_image'] = main_filename
         result['mapping'][f"{product_index_str}{letter}"] = main_filename
         used_indices.add(0)
-        print(f"   Main: {product_index_str}{letter} -> {main_filename}")
+        print(f"   Main: {product_index_str}{letter} -> {main_filename.encode('ascii', 'replace').decode('ascii')}")
     
     # Match کردن رنگ‌ها
     if colors:
@@ -310,7 +310,7 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
                 result['match_report'][color] = (f"{product_index_str}{letter}", match_type)
                 used_indices.add(idx)
                 
-                print(f"   [MATCH] Color '{color}' -> '{color_en}': {product_index_str}{letter} -> {color_filename} ({match_type})")
+                print(f"   [MATCH] Color '{color}' -> '{color_en}': {product_index_str}{letter} -> {color_filename.encode('ascii', 'replace').decode('ascii')} ({match_type})")
             else:
                 print(f"   [WARN] Color '{color}' -> '{color_en}': No matching image found!")
     
@@ -322,7 +322,7 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
             result['general_images'].append(general_filename)
             result['mapping'][f"{product_index_str}{letter}"] = general_filename
             used_indices.add(idx)
-            print(f"   [IMG] General: {product_index_str}{letter} -> {general_filename}")
+            print(f"   [IMG] General: {product_index_str}{letter} -> {general_filename.encode('ascii', 'replace').decode('ascii')}")
             general_count += 1
     
     # ساخت gallery و alts

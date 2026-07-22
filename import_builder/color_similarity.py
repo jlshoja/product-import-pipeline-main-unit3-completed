@@ -136,7 +136,7 @@ def is_color_similar(color1, color2):
 # Test
 if __name__ == "__main__":
     print("="*70)
-    print("🎨 Color Similarity Test")
+    print("Color Similarity Test")
     print("="*70)
     
     test_pairs = [
@@ -150,12 +150,12 @@ if __name__ == "__main__":
     
     for c1, c2 in test_pairs:
         result = is_color_similar(c1, c2)
-        status = "✅ Similar" if result else "❌ Not similar"
+        status = "[OK] Similar" if result else "[FAIL] Not similar"
         print(f"{status}: '{c1}' ↔ '{c2}'")
     
     print("\n" + "="*70)
     print("Similar colors to 'black':")
     for c in get_similar_colors('black'):
-        print(f"  - {c}")
+        print(f"   - {c}")
     
     print("="*70)
