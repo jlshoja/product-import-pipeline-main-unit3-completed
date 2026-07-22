@@ -229,7 +229,7 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
     count, available_images = count_available_images(product_index_str, source_folder)
     
     if count == 0:
-        print(f"⚠️ No images found for product {product_index_str} in folder — generating names from colors")
+        print(f"[WARN] No images found for product {product_index_str} in folder — generating names from colors")
         
         # FALLBACK: ساخت نام‌ها از روی رنگ‌های اکسل بدون نیاز به فایل فیزیکی
         result = {
@@ -264,10 +264,10 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
         
         result['gallery_images'] = [img for img, _ in result['all_images_with_alts']]
         
-        print(f"   ✅ Generated {len(result['all_images_with_alts'])} image names from colors (no physical files needed)")
+        print(f"   [OK] Generated {len(result['all_images_with_alts'])} image names from colors (no physical files needed)")
         return result
     
-    print(f"📸 Product {product_index_str}: {product_name_fa}")
+    print(f"[IMG] Product {product_index_str}: {product_name_en}")
     
     result = {
         'mapping': {},
@@ -288,7 +288,7 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
         result['main_image'] = main_filename
         result['mapping'][f"{product_index_str}{letter}"] = main_filename
         used_indices.add(0)
-        print(f"   Main: {product_index_str}{letter} → {main_filename}")
+        print(f"   Main: {product_index_str}{letter} -> {main_filename}")
     
     # Match کردن رنگ‌ها
     if colors:
@@ -310,9 +310,9 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
                 result['match_report'][color] = (f"{product_index_str}{letter}", match_type)
                 used_indices.add(idx)
                 
-                print(f"   🎯 Color '{color}' → '{color_en}': {product_index_str}{letter} → {color_filename} ({match_type})")
+                print(f"   [MATCH] Color '{color}' -> '{color_en}': {product_index_str}{letter} -> {color_filename} ({match_type})")
             else:
-                print(f"   ⚠️ Color '{color}' → '{color_en}': No matching image found!")
+                print(f"   [WARN] Color '{color}' -> '{color_en}': No matching image found!")
     
     # عکس‌های باقیمانده = general
     general_count = 1
@@ -322,7 +322,7 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
             result['general_images'].append(general_filename)
             result['mapping'][f"{product_index_str}{letter}"] = general_filename
             used_indices.add(idx)
-            print(f"   📷 General: {product_index_str}{letter} → {general_filename}")
+            print(f"   [IMG] General: {product_index_str}{letter} -> {general_filename}")
             general_count += 1
     
     # ساخت gallery و alts
@@ -362,6 +362,6 @@ def generate_image_names_v11(product_index, product_name_fa, model, colors,
         
         result['all_images_with_alts'].append((img, alt))
     
-    print(f"   ✅ Total: {len(result['mapping'])} images mapped")
+    print(f"   [OK] Total: {len(result['mapping'])} images mapped")
     
     return result

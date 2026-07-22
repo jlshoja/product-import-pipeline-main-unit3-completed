@@ -291,13 +291,13 @@ class ProductNameManager:
                 unknown_products.add(clean_name)
         
         if unknown_products:
-            print(f"\n⚠️ {len(unknown_products)} محصول ناشناخته یافت شد:")
+            print(f"\n[WARN] {len(unknown_products)} unknown products found:")
             for product in sorted(unknown_products):
                 suggested = transliterate_persian(product)
-                print(f"   • {product} → {suggested}")
-            print(f"\n💡 این محصولات را می‌توانید به فایل {self.excel_path} اضافه کنید")
+                print(f"   - {product} -> {suggested}")
+            print(f"\n[TIP] These products can be added to {self.excel_path}")
         else:
-            print(f"✅ همه محصولات شناخته شده‌اند")
+            print(f"[OK] All products are recognized")
         
         return list(unknown_products)
     
@@ -323,32 +323,32 @@ class ProductNameManager:
                                 products.append(product_part)
             return products
         except Exception as e:
-            print(f"❌ خطا در خواندن لاگ: {e}")
+            print(f"[ERROR] Error reading log: {e}")
             return []
     
     def print_missing_products_report(self):
-        """نمایش گزارش محصولات ناشناخته"""
+        """Show missing products report"""
         print("\n" + "="*70)
-        print("📊 گزارش محصولات ناشناخته")
+        print("[REPORT] Missing Products Report")
         print("="*70)
         
-        # از لاگ فایل
+        # From log file
         log_products = self.get_missing_products_from_log()
         if log_products:
-            print(f"\n📝 محصولات ثبت شده در لاگ ({len(log_products)} محصول):")
+            print(f"\n[LOG] Products in log ({len(log_products)} products):")
             for product in log_products:
                 transliterated = transliterate_persian(product)
-                print(f"   • {product:<30} → {transliterated}")
+                print(f"   - {product:<30} -> {transliterated}")
         
-        # از حافظه
+        # From memory
         if self.missing_products:
-            print(f"\n⚡ محصولات این اجرا ({len(self.missing_products)} محصول):")
+            print(f"\n[THIS RUN] Products this run ({len(self.missing_products)} products):")
             for product in self.missing_products:
                 transliterated = transliterate_persian(product)
-                print(f"   • {product:<30} → {transliterated}")
+                print(f"   - {product:<30} -> {transliterated}")
         
         if not log_products and not self.missing_products:
-            print("\n✅ هیچ محصول ناشناخته‌ای یافت نشد!")
+            print("\n[OK] No unknown products found!")
         
         print("="*70)
     

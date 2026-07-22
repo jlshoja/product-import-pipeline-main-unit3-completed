@@ -51,7 +51,7 @@ class ColorManager:
     def load_colors(self):
         """Load color mappings from Excel"""
         if not os.path.exists(self.excel_path):
-            print(f"⚠️ {self.excel_path} not found")
+            print(f"[WARN] {self.excel_path} not found")
             print(f"   Color translation will not work!")
             return
         
@@ -60,7 +60,7 @@ class ColorManager:
             
             # Check if has Persian and English columns
             if 'Persian' not in df.columns or 'English' not in df.columns:
-                print(f"⚠️ Excel must have 'Persian' and 'English' columns")
+                print(f"[WARN] Excel must have 'Persian' and 'English' columns")
                 return
             
             # Load mappings
@@ -77,10 +77,10 @@ class ColorManager:
                     # ساخت reverse mapping (English -> Persian)
                     self.reverse_color_dict[english_normalized] = persian
             
-            print(f"✅ ColorManager: Loaded {len(self.color_dict)} color mappings")
+            print(f"[OK] ColorManager: Loaded {len(self.color_dict)} color mappings")
             
         except Exception as e:
-            print(f"❌ Error loading {self.excel_path}: {e}")
+            print(f"[ERROR] Error loading {self.excel_path}: {e}")
     
     def _simple_transliterate(self, text):
         """
@@ -143,7 +143,9 @@ class ColorManager:
         # Not found - add to missing list
         if persian_color not in self.missing_colors:
             self.missing_colors.append(persian_color)
-            print(f"⚠️ Color not found in mapping: '{persian_color}'")
+            # Avoid encoding issues with Persian chars in console
+            safe_color = persian_color.encode('ascii', 'replace').decode('ascii')
+            print(f"[WARN] Color not found in mapping: '{safe_color}'")
         
         # Fallback: use transliterate
         transliterated = self._simple_transliterate(persian_color)
@@ -191,7 +193,7 @@ class ColorManager:
             # Check if exists
             existing = df[df['Persian'].str.lower() == persian.lower()]
             if not existing.empty:
-                print(f"⚠️ Color '{persian}' already exists")
+                print(f"[WARN] Color '{persian}' already exists")
                 return False
             
             # Add new row
@@ -208,11 +210,11 @@ class ColorManager:
             # Update dict
             self.color_dict[persian.lower()] = english.lower()
             
-            print(f"✅ Added: {persian} → {english}")
+            print(f"[OK] Added: {persian} -> {english}")
             return True
             
         except Exception as e:
-            print(f"❌ Error adding color: {e}")
+            print(f"[ERROR] Error adding color: {e}")
             return False
     
     def get_missing_colors(self):
@@ -264,7 +266,7 @@ class ColorManager:
             return added
         
         except Exception as e:
-            print(f"❌ Error saving missing colors: {e}")
+            print(f"[ERROR] Error saving missing colors: {e}")
             return 0
     
     def validate_colors_in_dataframe(self, df, color_column='رنگ'):
@@ -291,7 +293,7 @@ class ColorManager:
                     unknown.add(color)
         
         if unknown:
-            print(f"\n⚠️ {len(unknown)} unknown colors found in DataFrame:")
+            print(f"\n[WARN] {len(unknown)} unknown colors found in DataFrame:")
             for color in sorted(unknown):
                 print(f"   - {color}")
         
@@ -312,18 +314,18 @@ if __name__ == "__main__":
         
         for color in test_colors:
             translated = cm.translate_color(color)
-            status = "✅" if translated.lower() != color.lower() else "❌"
-            print(f"   {status} {color:25s} → {translated}")
+            status = "[OK]" if translated.lower() != color.lower() else "[FAIL]"
+            print(f"   {status} {color:25s} -> {translated}")
         
-        print(f"\n📊 Total mappings loaded: {len(cm.color_dict)}")
+        print(f"\n[DATA] Total mappings loaded: {len(cm.color_dict)}")
     else:
-        print("\n❌ No mappings loaded - check color_mapping.xlsx")
+        print("[FAIL] No mappings loaded - check color_mapping.xlsx")
     
     # Test transliterate
     print("\n🧪 Testing transliterate:")
     test_texts = ['مشکی', 'قرمز', 'آبی کاربنی', 'سبز یشمی']
     for text in test_texts:
         result = cm._simple_transliterate(text)
-        print(f"   {text:20s} → {result}")
+        print(f"   {text:20s} -> {result}")
     
     print("\n" + "="*70)

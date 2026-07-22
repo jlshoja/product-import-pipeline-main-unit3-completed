@@ -40,7 +40,7 @@ except ImportError:
     except ImportError:
         HAS_V11_NAMING = False
         HAS_V9_NAMING = False
-        print("⚠️ No image naming module found - using fallback")
+        print("[WARN] No image naming module found - using fallback")
 
 HAS_FIXED_NAMING = HAS_V11_NAMING or HAS_V9_NAMING
 
@@ -178,9 +178,9 @@ def load_excluded_skus(sku_file='sku_list.txt'):
                 sku = line.strip()
                 if sku:
                     excluded.add(sku)
-        print(f"🚫 Loaded {len(excluded)} excluded SKUs from {sku_file}")
+        print(f"[EXCLUDE] Loaded {len(excluded)} excluded SKUs from {sku_file}")
     else:
-        print(f"⚠️  {sku_file} not found - no SKUs will be excluded")
+        print(f"[WARN]  {sku_file} not found - no SKUs will be excluded")
     return excluded
 
 
@@ -189,8 +189,8 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     پردازش محصولات با استفاده از ستون 'شماره'
     """
     print("\n" + "="*70)
-    print("🚀 WooCommerce Product Processing - Version 12.0")
-    print("✅ Using 'شماره' column for image mapping")
+    print("[START] WooCommerce Product Processing - Version 12.0")
+    print("[OK] Using 'Shomareh' column for image mapping")
     print("="*70)
 
     # Load excluded SKUs
@@ -199,20 +199,20 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     # خواندن فایل ورودی
     if input_file.endswith('.csv'):
         df_input = pd.read_csv(input_file, encoding='utf-8-sig')
-        print("📄 File type: CSV")
+        print("[FILE] File type: CSV")
     else:
         df_input = pd.read_excel(input_file, engine='openpyxl')
-        print("📄 File type: Excel")
+        print("[FILE] File type: Excel")
     
-    print(f"📊 Total rows: {len(df_input)}")
+    print(f"[DATA] Total rows: {len(df_input)}")
     
     # ✅ بررسی وجود ستون 'شماره'
     if 'شماره' not in df_input.columns:
-        print("\n❌ ERROR: Column 'شماره' not found in file!")
-        print("📋 Available columns:")
+        print("\n[ERROR] ERROR: Column 'شماره' not found in file!")
+        print("[LIST] Available columns:")
         for col in df_input.columns:
             print(f"   - {col}")
-        print("\n💡 Please add 'شماره' column with row numbers (1, 2, 3, ...)")
+        print("\n[HINT] Please add 'شماره' column with row numbers (1, 2, 3, ...)")
         return None, None, None
     
     # Validation
@@ -224,7 +224,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     
     # Expand by colors
     df_expanded = expand_rows_by_colors(df_input)
-    print(f"📊 Expanded rows (by colors): {len(df_expanded)}")
+    print(f"[DATA] Expanded rows (by colors): {len(df_expanded)}")
     
     # تنظیم source folder
     if not source_images_folder:
@@ -234,9 +234,9 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     image_mappings = {}
     grouped = df_expanded.groupby('sku')
     
-    print(f"\n📄 Processing {len(grouped)} products...")
+    print(f"\n[PAGE] Processing {len(grouped)} products...")
     if excluded_skus:
-        print(f"🚫 Will exclude variations with SKUs in sku_list.txt")
+        print(f"[EXCLUDE] Will exclude variations with SKUs in sku_list.txt")
     print("="*70)
     
     for product_sku, group in grouped:
@@ -257,7 +257,9 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
         product_name_en = translate_product_name_to_english(product_name)
         model_en = model.replace(' ', '-').lower()
         
-        print(f"\n🔹 Product {row_number}: {product_name} (SKU: {product_sku})")
+        # Use English version for console output to avoid encoding issues
+        safe_product_name = product_name_en if product_name_en else product_name
+        print(f"\n[PRODUCT] Product {row_number}: {safe_product_name} (SKU: {product_sku})")
         
         # رنگ‌ها
         all_colors = []
@@ -295,7 +297,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
                 )
         else:
             # Fallback ساده
-            print(f"⚠️ Using fallback naming for product {row_number}")
+            print(f"[WARN] Using fallback naming for product {row_number}")
             image_info = {
                 'main_image': f"{product_name_en}-{model_en}-main{OUTPUT_IMAGE_EXTENSION}",
                 'color_images': {},
@@ -390,7 +392,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
             for i, (_, row) in enumerate(group.iterrows())
         ]
         if all_variation_skus and all(sku in excluded_skus for sku in all_variation_skus):
-            print(f"  🚫 All variations excluded for product {product_sku} - skipping parent too")
+            print(f"  [EXCLUDE] All variations excluded for product {product_sku} - skipping parent too")
             continue
 
         output_rows.append(parent_row)
@@ -403,7 +405,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
 
             # Skip this variation if its SKU is in the excluded list
             if variation_sku in excluded_skus:
-                print(f"  🚫 Excluded: {variation_sku}")
+                print(f"  [EXCLUDE] Excluded: {variation_sku}")
                 continue
             
             # ✅ FIX: normalize color_en همانند image_naming_v11 قبل از lookup
@@ -471,7 +473,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
         'missing_sources': [],
     }
     if process_images and source_images_folder and dest_images_folder:
-        print(f"\n🖼️ Processing images (copying before CSV write)...")
+        print(f"\n[IMAGE] Processing images (copying before CSV write)...")
 
         for source_name, target_name in image_mappings.items():
             extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.JPG', '.JPEG', '.PNG', '.WEBP']
@@ -496,22 +498,22 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_path, dest_path)
                 copy_stats['copied'] += 1
-                print(f"  ✅ {source_name} → {target_name}")
+                print(f"  [OK] {source_name} -> {target_name}")
             else:
                 copy_stats['missing'] += 1
                 copy_stats['missing_sources'].append(source_name)
-                print(f"  ⚠️ Missing: {source_name}")
+                print(f"  [WARN] Missing: {source_name}")
 
-        print(f"\n   ✅ Copied: {copy_stats['copied']} images")
+        print(f"\n   [OK] Copied: {copy_stats['copied']} images")
         if copy_stats['missing'] > 0:
-            print(f"   ⚠️ Missing: {copy_stats['missing']} images")
+            print(f"   [WARN] Missing: {copy_stats['missing']} images")
 
         # Per-image gate: if any mapped image is missing, do NOT write the CSVs.
         # A partial import silently drops product images, which is worse than
         # failing loudly and re-running image processing.
         if copy_stats['missing'] > 0:
             print(
-                f"\n❌ {copy_stats['missing']} mapped image(s) were not found in "
+                f"\n[FAIL] {copy_stats['missing']} mapped image(s) were not found in "
                 f"{source_images_folder}. Skipping CSV creation so a broken import "
                 f"is not emitted. Missing sources: "
                 f"{', '.join(copy_stats['missing_sources'][:20])}"
@@ -529,7 +531,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     output_csv = os.path.join(output_folder, f"woocommerce_import_{timestamp}.csv")
     df_output.to_csv(output_csv, index=False, encoding='utf-8-sig')
 
-    # If manifests are provided, split into new vs updated CSVs using SKU
+# If manifests are provided, split into new vs updated CSVs using SKU
     new_manifest = os.environ.get('NEW_MANIFEST')
     updated_manifest = os.environ.get('UPDATED_MANIFEST')
     try:
@@ -546,7 +548,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
                     df_new_out = df_output[df_output['sku'].astype(str).isin(new_skus)]
                     new_csv = os.path.join(output_folder, f"woocommerce_new_{timestamp}.csv")
                     df_new_out.to_csv(new_csv, index=False, encoding='utf-8-sig')
-                    print(f"✅ New products CSV: {new_csv}  ({len(df_new_out)} rows)")
+                    print(f"[OK] New products CSV: {new_csv}  ({len(df_new_out)} rows)")
 
             if updated_manifest and os.path.exists(updated_manifest):
                 df_updated_list = pd.read_csv(updated_manifest, encoding='utf-8-sig')
@@ -555,14 +557,14 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
                     df_update_out = df_output[df_output['sku'].astype(str).isin(updated_skus)]
                     update_csv = os.path.join(output_folder, f"woocommerce_update_{timestamp}.csv")
                     df_update_out.to_csv(update_csv, index=False, encoding='utf-8-sig')
-                    print(f"✅ Update products CSV: {update_csv}  ({len(df_update_out)} rows)")
+                    print(f"[OK] Update products CSV: {update_csv}  ({len(df_update_out)} rows)")
     except Exception as e:
-        print(f"⚠️  Could not split CSVs by manifests: {e}")
+        print(f"[WARN] Could not split CSVs by manifests: {e}")
 
     print("\n" + "="*70)
-    print(f"✅ CSV created: {output_csv}")
-    print(f"   📊 Total products: {len(grouped)}")
-    print(f"   📊 Total rows: {len(df_output)}")
+    print(f"[OK] CSV created: {output_csv}")
+    print(f"   [DATA] Total products: {len(grouped)}")
+    print(f"   [DATA] Total rows: {len(df_output)}")
     print("="*70)
 
     return df_output, image_mappings, copy_stats
@@ -583,7 +585,7 @@ if __name__ == "__main__":
     process_images_flag = '--process-images' in sys.argv
     
     if not os.path.exists(input_file):
-        print(f"❌ Error: File not found: {input_file}")
+        print(f"[ERROR] Error: File not found: {input_file}")
         sys.exit(1)
     
     try:
@@ -598,7 +600,7 @@ if __name__ == "__main__":
             print("\n✅ Processing completed successfully!")
         
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
