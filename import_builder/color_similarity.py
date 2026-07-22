@@ -12,11 +12,11 @@ COLOR_SIMILARITY = {
     'black': ['dark-gray', 'charcoal', 'ebony', 'jet-black', 'stone-black', 'plain-black'],
     'dark-gray': ['black', 'charcoal', 'gray', 'stone-black'],
     'gray': ['dark-gray', 'light-gray', 'silver', 'charcoal'],
-    'light-gray': ['gray', 'silver', 'off-white'],
+    'light-gray': ['gray', 'silver', 'off-white', 'white'],
     
     # سفید و کرم‌ها
-    'white': ['off-white', 'cream', 'ivory', 'light-cream'],
-    'off-white': ['white', 'cream', 'ivory'],
+    'white': ['off-white', 'cream', 'ivory', 'light-cream', 'silver', 'light-gray'],
+    'off-white': ['white', 'cream', 'ivory', 'silver', 'light-gray'],
     'cream': ['beige', 'off-white', 'light-cream', 'ivory'],
     'light-cream': ['cream', 'beige', 'off-white'],
     'beige': ['cream', 'tan', 'sand'],
@@ -69,7 +69,7 @@ COLOR_SIMILARITY = {
     'violet': ['purple', 'lilac'],
     
     # نقره‌ای و طلایی
-    'silver': ['gray', 'light-gray', 'metallic-gray'],
+    'silver': ['gray', 'light-gray', 'metallic-gray', 'white'],
     'gold': ['golden', 'bronze', 'brass'],
     'bronze': ['gold', 'copper', 'brown'],
     'copper': ['bronze', 'gold', 'metallic-orange'],
