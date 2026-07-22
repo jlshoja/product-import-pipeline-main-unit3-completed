@@ -155,3 +155,6 @@ runtime/reports
 # ==========================================
 product_extraction/runtime/state/   
 product_extraction/runtime/state/pipeline_state.json
+
+# Generated knowledge graph output
+graphify-out/
