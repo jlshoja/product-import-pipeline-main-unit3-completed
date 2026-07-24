@@ -590,7 +590,7 @@ def extract_text_by_label(driver, label):
                     # فیلتر کردن مقادیر نامعتبر
                     if value and value != label and len(value) < 200:
                         # حذف کلمات اضافی معمول
-                        value = value.replace('انتخاب کنید', '').replace('پاک کردن', '').strip()
+                        value = value.replace('انتخاب کنید', '').replace('پاک کردن', '').replace('من', '').strip()
                         if value:
                             return value
         except:
@@ -952,7 +952,7 @@ def extract_product_details(driver, product_url, color_parser):
                     if match:
                         try:
                             value = match.group(1).strip()
-                            value = value.replace('انتخاب کنید', '').replace(':', '').strip()
+                            value = value.replace('انتخاب کنید', '').replace(':', '').replace('من', '').strip()
                             if value and len(value) < 100:
                                 product_data[key] = value
                                 break

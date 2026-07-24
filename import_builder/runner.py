@@ -3,7 +3,7 @@
 
 """
 Import Builder - Automated Runner
-Runs WooCommerce CSV generation without web interface.
+Runs WooCommerce XLSX generation without web interface.
 """
 
 import os
@@ -15,7 +15,7 @@ from datetime import datetime
 _this_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(_this_dir))
 
-from paths import ROOT_DIR, IMPORT_BUILDER_UPLOADS_DIR
+from paths import ROOT_DIR, IMPORT_BUILDER_UPLOADS_DIR, IMPORT_PROJECT_EXCEL_DIR, IMPORT_PROJECT_IMAGES_DIR
 
 _DATE_FOLDER_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$')
 
@@ -213,10 +213,12 @@ def main():
 
     try:
         from woocommerce_generator_v12 import process_products_v12
+        from import_copier import copy_all_to_import_project
+        from manifest_generator import generate_import_manifest
 
         dest_images.mkdir(parents=True, exist_ok=True)
 
-        df_output, mappings, copy_stats = process_products_v12(
+        df_output, mappings, copy_stats, generated_files = process_products_v12(
             input_file=str(input_file),
             process_images=True,
             source_images_folder=str(source_images),
@@ -227,16 +229,16 @@ def main():
             print("ERROR: Import builder processing failed.")
             return False
 
-        # Per-image gate: the generator copies images BEFORE writing the CSVs
+        # Per-image gate: the generator copies images BEFORE writing the XLSX
         # and reports any mapped image it could not find. If any are missing it
-        # returns without writing the CSVs — treat that as a hard failure so a
+        # returns without writing the XLSX — treat that as a hard failure so a
         # broken import (rows referencing absent images) is never emitted.
         copy_stats = copy_stats or {}
         missing = copy_stats.get('missing', 0)
         if missing:
             print(
                 f"ERROR: {missing} mapped image(s) were missing from "
-                f"{source_images}; the WooCommerce CSVs were not written. "
+                f"{source_images}; the WooCommerce XLSX files were not written. "
                 f"Re-run image processing so every product SKU has its images, "
                 f"then rebuild. Missing sources: "
                 f"{', '.join(copy_stats.get('missing_sources', [])[:20])}"
@@ -255,10 +257,40 @@ def main():
             return False
 
         # Save a convenience copy to data/outputs/
-        output_copy = ROOT_DIR / "data" / "outputs" / "woocommerce_import.csv"
-        df_output.to_csv(str(output_copy), index=False, encoding='utf-8-sig')
+        output_copy = ROOT_DIR / "data" / "outputs" / "woocommerce_import.xlsx"
+        df_output.to_excel(str(output_copy), index=False, engine='openpyxl')
         print(f"\nCopy saved: {output_copy}")
         print(f"Renamed images: {copied} files in {dest_images}")
+
+        # Copy files to WooCommerce Import Project
+        print("\nCopying files to WooCommerce Import Project...")
+        copy_result = copy_all_to_import_project(
+            generated_files=generated_files,
+            renamed_images_dir=dest_images,
+        )
+        
+        # Check for any failures
+        failed_copies = [r for r in copy_result.get('excel_copies', []) if not r.get('success', True)]
+        failed_copies += [r for r in copy_result.get('image_copies', []) if not r.get('success', True)]
+        if failed_copies:
+            print(f"WARNING: Some files failed to copy: {len(failed_copies)} failures")
+        else:
+            excel_count = len([r for r in copy_result.get('excel_copies', []) if r.get('success', True)])
+            img_count = len([r for r in copy_result.get('image_copies', []) if r.get('success', True) and not r.get('summary', False)])
+            print(f"Successfully copied {excel_count} Excel files and {img_count} images to Import Project")
+
+        # Generate import manifest
+        print("Generating import manifest...")
+        manifest_path = generate_import_manifest(
+            generated_files=generated_files,
+            renamed_images_dir=dest_images,
+            import_excel_dir=IMPORT_PROJECT_EXCEL_DIR,
+            import_images_dir=IMPORT_PROJECT_IMAGES_DIR,
+            copy_log=copy_result.get('excel_copies', []) + copy_result.get('image_copies', []),
+            mode=os.environ.get('IMPORT_MODE', 'full'),
+            df_output=df_output,
+        )
+        print(f"Import manifest saved: {manifest_path}")
 
         return True
 

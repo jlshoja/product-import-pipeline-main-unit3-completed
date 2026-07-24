@@ -539,19 +539,20 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
             )
             return df_output, image_mappings, copy_stats
 
-    # ذخیره CSV (only reached when every mapped image was copied)
+# ذخیره XLSX (only reached when every mapped image was copied)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     date_str = datetime.now().strftime('%Y%m%d')
     uploads_dir = str(IMPORT_BUILDER_UPLOADS_DIR)
     os.makedirs(uploads_dir, exist_ok=True)
     output_folder = os.path.join(uploads_dir, date_str)
     os.makedirs(output_folder, exist_ok=True)
-    output_csv = os.path.join(output_folder, f"woocommerce_import_{timestamp}.csv")
-    df_output.to_csv(output_csv, index=False, encoding='utf-8-sig')
+    output_xlsx = os.path.join(output_folder, f"woocommerce_import_{timestamp}.xlsx")
+    df_output.to_excel(output_xlsx, index=False, engine='openpyxl')
 
-# If manifests are provided, split into new vs updated CSVs using SKU
+# If manifests are provided, split into new vs updated XLSX using SKU
     new_manifest = os.environ.get('NEW_MANIFEST')
     updated_manifest = os.environ.get('UPDATED_MANIFEST')
+    generated_files = {'full': output_xlsx}
     try:
         if new_manifest or updated_manifest:
             # Normalize sku column in df_output
@@ -564,23 +565,25 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
                 new_skus = set(map(str, df_new_list['sku'].astype(str))) if 'sku' in df_new_list.columns else set()
                 if new_skus:
                     df_new_out = df_output[df_output['sku'].astype(str).isin(new_skus)]
-                    new_csv = os.path.join(output_folder, f"woocommerce_new_{timestamp}.csv")
-                    df_new_out.to_csv(new_csv, index=False, encoding='utf-8-sig')
-                    print(f"[OK] New products CSV: {new_csv}  ({len(df_new_out)} rows)")
+                    new_xlsx = os.path.join(output_folder, f"woocommerce_new_{timestamp}.xlsx")
+                    df_new_out.to_excel(new_xlsx, index=False, engine='openpyxl')
+                    generated_files['new'] = new_xlsx
+                    print(f"[OK] New products XLSX: {new_xlsx}  ({len(df_new_out)} rows)")
 
             if updated_manifest and os.path.exists(updated_manifest):
                 df_updated_list = pd.read_csv(updated_manifest, encoding='utf-8-sig')
                 updated_skus = set(map(str, df_updated_list['sku'].astype(str))) if 'sku' in df_updated_list.columns else set()
                 if updated_skus:
                     df_update_out = df_output[df_output['sku'].astype(str).isin(updated_skus)]
-                    update_csv = os.path.join(output_folder, f"woocommerce_update_{timestamp}.csv")
-                    df_update_out.to_csv(update_csv, index=False, encoding='utf-8-sig')
-                    print(f"[OK] Update products CSV: {update_csv}  ({len(df_update_out)} rows)")
+                    update_xlsx = os.path.join(output_folder, f"woocommerce_update_{timestamp}.xlsx")
+                    df_update_out.to_excel(update_xlsx, index=False, engine='openpyxl')
+                    generated_files['update'] = update_xlsx
+                    print(f"[OK] Update products XLSX: {update_xlsx}  ({len(df_update_out)} rows)")
     except Exception as e:
-        print(f"[WARN] Could not split CSVs by manifests: {e}")
+        print(f"[WARN] Could not split XLSX by manifests: {e}")
 
     print("\n" + "="*70)
-    print(f"[OK] CSV created: {output_csv}")
+    print(f"[OK] XLSX created: {output_xlsx}")
     print(f"   [DATA] Total products: {len(grouped)}")
     print(f"   [DATA] Total rows: {len(df_output)}")
     print("="*70)
@@ -593,7 +596,7 @@ def process_products_v12(input_file, process_images=False, source_images_folder=
     if product_name_manager and hasattr(product_name_manager, 'export_unknown_products'):
         product_name_manager.export_unknown_products()
 
-    return df_output, image_mappings, copy_stats
+    return df_output, image_mappings, copy_stats, generated_files
 
 
 if __name__ == "__main__":
@@ -615,7 +618,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     try:
-        df_output, mappings, copy_stats = process_products_v12(
+        df_output, mappings, copy_stats, generated_files = process_products_v12(
             input_file,
             process_images=process_images_flag,
             source_images_folder=SOURCE_IMAGES_FOLDER,  # ✅ همیشه پاس بده، fallback داخل تابع هندل میشه
@@ -624,6 +627,8 @@ if __name__ == "__main__":
         
         if df_output is not None:
             print("\n✅ Processing completed successfully!")
+            for ftype, fpath in generated_files.items():
+                print(f"   [{ftype.upper()}] {fpath}")
         
     except Exception as e:
         print(f"\n[ERROR] Error: {e}")

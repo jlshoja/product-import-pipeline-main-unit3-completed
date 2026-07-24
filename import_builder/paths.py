@@ -27,6 +27,12 @@ COLOR_MAPPING_FILE = str(ROOT_DIR / "data" / "mappings" / get_file("color_mappin
 PRODUCT_NAMES_FILE = str(ROOT_DIR / "data" / "mappings" / get_file("product_names"))
 MISSING_PRODUCTS_LOG = str(LOGS_DIR / get_file("missing_products_log"))
 
+# Target WooCommerce Import Project folders.
+IMPORT_PROJECT_EXCEL_DIR = Path(r"E:\Luxbaz\All Codes\Projects\AI-Powered-WooCommerce-Product-Automation-System\input")
+IMPORT_PROJECT_IMAGES_DIR = Path(r"E:\Luxbaz\All Codes\Projects\AI-Powered-WooCommerce-Product-Automation-System\input\images")
+
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 IMPORT_BUILDER_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+IMPORT_PROJECT_EXCEL_DIR.mkdir(parents=True, exist_ok=True)
+IMPORT_PROJECT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
